@@ -1,0 +1,13 @@
+<!-- templates/shop/flower_list.html -->
+{% extends "base.html" %}
+
+{% block title %}Каталог цветов{% endblock %}
+
+{% block content %}
+<h2>Наши цветы</h2>
+<ul>
+    {% for flower in flowers %}
+    <li>{{ flower.name }} - {{ flower.price }} руб.</li>
+    {% endfor %}
+</ul>
+{% endblock %}

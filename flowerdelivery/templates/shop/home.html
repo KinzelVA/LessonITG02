@@ -1,0 +1,10 @@
+<!-- templates/shop/home.html -->
+{% extends "base.html" %}
+
+{% block title %}Главная страница{% endblock %}
+
+{% block content %}
+<h2>Добро пожаловать в FlowerDelivery!</h2>
+<p>Выберите цветы из нашего каталога для заказа.</p>
+<a href="{% url 'flower_list' %}">Перейти в каталог</a>
+{% endblock %}

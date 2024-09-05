@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Главная{% endblock %}
+
+{% block content %}
+<h2>Добро пожаловать в FlowerDelivery!</h2>
+<p>Выберите один из разделов ниже:</p>
+
+<div class="navigation">
+    <a href="/shop/" class="nav-button">Каталог цветов</a>
+    <a href="/orders/" class="nav-button">Мои заказы</a>
+    <a href="/reviews/" class="nav-button">Отзывы</a>
+    <a href="/analytics/" class="nav-button">Аналитика</a>
+</div>
+{% endblock %}
+

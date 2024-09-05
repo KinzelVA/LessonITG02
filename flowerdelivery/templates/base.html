@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FlowerDelivery{% endblock %}</title>
+
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <header>
+        <h1>FlowerDelivery</h1>
+        <nav>
+            <a href="/">Главная</a>
+            <a href="/shop/">Каталог</a>
+            <a href="/orders/">Мои заказы</a>
+            <a href="/reviews/">Отзывы</a>
+            <a href="/analytics/">Аналитика</a>
+        </nav>
+    </header>
+    <div class="content">
+        {% block content %} {% endblock %}
+    </div>
+    <footer>
+        <p>&copy; 2024 FlowerDelivery. Все права защищены.</p>
+    </footer>
+</body>
+</html>
