@@ -1,6 +1,7 @@
 # flowerdelivery/settings.py
 
 from pathlib import Path
+from django.contrib.messages import constants as messages
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -77,6 +78,21 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+# Срок хранения сессии по умолчанию
+SESSION_COOKIE_AGE = 1209600  # 2 недели
+
+# Использование механизма сессий Django
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Сессия не истечет при закрытии браузера
+SESSION_SAVE_EVERY_REQUEST = True  # Сохранять сессии при каждом запросе
+
+MESSAGE_TAGS = {
+    messages.DEBUG: 'debug',
+    messages.INFO: 'info',
+    messages.SUCCESS: 'success',
+    messages.WARNING: 'warning',
+    messages.ERROR: 'error',
+}
 
 LANGUAGE_CODE = 'ru-ru'
 

@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+
+{% block title %}Регистрация{% endblock %}
+
+{% block content %}
+<h2>Регистрация</h2>
+
+<form method="POST">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div>
+        <input type="checkbox" name="remember_me" id="remember_me">
+        <label for="remember_me">Запомнить меня</label>
+    </div>
+    <button type="submit">Зарегистрироваться</button>
+</form>
+
+{% endblock %}

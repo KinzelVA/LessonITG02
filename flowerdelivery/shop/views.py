@@ -1,6 +1,8 @@
 # shop/views.py
 from django.shortcuts import render, get_object_or_404
 from .models import Flower
+from django.shortcuts import render
+from users.forms import UserRegisterForm
 
 def flower_list(request):
     flowers = Flower.objects.all()
@@ -11,5 +13,5 @@ def flower_detail(request, pk):
     return render(request, 'shop/flower_detail.html', {'flower': flower})
 
 def home(request):
-    """Главная страница сайта."""
-    return render(request, 'shop/home.html')
+    form = UserRegisterForm()
+    return render(request, 'shop/index.html', {'form': form})

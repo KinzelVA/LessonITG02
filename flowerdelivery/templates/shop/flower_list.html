@@ -1,13 +1,22 @@
-<!-- templates/shop/flower_list.html -->
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
 {% block title %}Каталог цветов{% endblock %}
 
 {% block content %}
-<h2>Наши цветы</h2>
-<ul>
-    {% for flower in flowers %}
-    <li>{{ flower.name }} - {{ flower.price }} руб.</li>
-    {% endfor %}
-</ul>
+<h2>Каталог цветов</h2>
+<p>Здесь вы можете выбрать цветы для заказа:</p>
+
+<!-- Пример карточек товаров -->
+<div class="product-list">
+    <div class="product-item">
+        <h3>Роза</h3>
+        <p>Цена: 500 руб.</p>
+        <a href="#" class="nav-button">Добавить в корзину</a>
+    </div>
+    <div class="product-item">
+        <h3>Тюльпан</h3>
+        <p>Цена: 300 руб.</p>
+        <a href="#" class="nav-button">Добавить в корзину</a>
+    </div>
+</div>
 {% endblock %}
