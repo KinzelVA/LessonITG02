@@ -1,8 +1,8 @@
 /* Основные стили для всего сайта */
 .logo-container {
     position: absolute;
-    top: 20px;
-    right: 20px;
+    top: 0px;
+    left: 0px;
 }
 
 .logo-container img {
@@ -11,7 +11,7 @@
 }
 
 .carousel-item img {
-    max-height: 600px;
+    max-height: 300px;
     object-fit: cover;
 }
 
