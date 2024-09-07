@@ -1,6 +1,7 @@
 from django.db import models
 from users.models import CustomUser
 from shop.models import Flower
+import requests
 
 class Order(models.Model):
     STATUS_CHOICES = [
