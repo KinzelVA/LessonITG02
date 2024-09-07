@@ -1,8 +1,8 @@
 # shop/views.py
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
 from .models import Flower
-from django.shortcuts import render
-from users.forms import UserRegisterForm
+from users.forms import UserRegisterForm  # Форма регистрации
 
 def flower_list(request):
     flowers = Flower.objects.all()
@@ -13,5 +13,13 @@ def flower_detail(request, pk):
     return render(request, 'shop/flower_detail.html', {'flower': flower})
 
 def home(request):
-    form = UserRegisterForm()
-    return render(request, 'shop/index.html', {'form': form})
+    if request.method == 'POST':
+        form = UserRegisterForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Ваш аккаунт был создан!')
+            return redirect('home')
+    else:
+        form = UserRegisterForm()
+
+    return render(request, 'shop/home.html', {'form': form})

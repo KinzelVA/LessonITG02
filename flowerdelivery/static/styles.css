@@ -1,4 +1,20 @@
 /* Основные стили для всего сайта */
+.logo-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+.logo-container img {
+    width: 150px; /* Размер логотипа */
+    height: auto;
+}
+
+.carousel-item img {
+    max-height: 600px;
+    object-fit: cover;
+}
+
 
 body {
     font-family: 'Arial', sans-serif;

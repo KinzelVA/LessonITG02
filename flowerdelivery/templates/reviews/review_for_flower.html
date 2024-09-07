@@ -1,6 +1,18 @@
 <!-- templates/reviews/reviews_for_flower.html -->
 {% extends "base.html" %}
 
+.logo-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+.logo-container img {
+    width: 150px; /* Размер логотипа */
+    height: auto;
+}
+
+
 {% block title %}Отзывы о {{ flower.name }}{% endblock %}
 
 {% block content %}

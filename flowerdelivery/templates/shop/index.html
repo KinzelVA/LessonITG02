@@ -5,17 +5,7 @@
 {% block content %}
 <h2>Добро пожаловать в FlowerDelivery!</h2>
 
-<p>Зарегистрируйтесь, чтобы сделать заказ:</p>
 
-<form method="POST">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <div>
-        <input type="checkbox" name="remember_me" id="remember_me">
-        <label for="remember_me">Запомнить меня</label>
-    </div>
-    <button type="submit">Зарегистрироваться</button>
-</form>
 
 <div class="navigation">
     <a href="/shop/" class="nav-button">Каталог цветов</a>
