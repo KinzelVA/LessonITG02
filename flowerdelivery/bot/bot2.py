@@ -29,7 +29,7 @@ def create_keyboard():
 
 # Функция для регистрации пользователя через API
 async def register_user_via_bot(username):
-    url = f"http://127.0.0.1:8000/api/register/"
+    url = "http://127.0.0.1:8000/users/register/"
     data = {'username': username}
     async with aiohttp.ClientSession() as session:
         async with session.post(url, json=data) as response:
