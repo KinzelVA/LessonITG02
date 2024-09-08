@@ -16,6 +16,15 @@
     </div>
         <h1>FlowerDelivery</h1>
         <nav>
+             <ul>
+
+                {% if user.is_authenticated %}
+
+
+                    <li><a href="{% url 'login' %}">Войти</a></li>
+                    <li><a href="{% url 'register' %}">Зарегистрироваться</a></li>
+                {% endif %}
+            </ul>
             <a href="/">Главная</a>
             <a href="/shop/">Каталог</a>
             <a href="/orders/">Мои заказы</a>

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Каталог цветов{% endblock %}
 
@@ -8,13 +9,20 @@
 
 <!-- Пример карточек товаров -->
 <div class="product-list">
+    <!-- Карточка Роза -->
     <div class="product-item">
         <h3>Роза</h3>
+        <p>Роза, это очень красивый цветок</p>
+        <img src="{% static 'images/3df854dcc2134fb48f302f377d3012a6.png' %}" alt="Роза" class="product-image">
         <p>Цена: 500 руб.</p>
         <a href="#" class="nav-button">Добавить в корзину</a>
     </div>
+
+    <!-- Карточка Тюльпан -->
     <div class="product-item">
         <h3>Тюльпан</h3>
+        <p>Тюльпан, это самый популярный весенний цветок</p>
+        <img src="{% static 'images/c6790151abb04a6ba27bc8374a2778f4.png' %}" alt="Тюльпан" class="product-image">
         <p>Цена: 300 руб.</p>
         <a href="#" class="nav-button">Добавить в корзину</a>
     </div>

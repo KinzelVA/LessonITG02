@@ -11,10 +11,9 @@
 }
 
 .carousel-item img {
-    max-height: 300px;
+    max-height: 400px;
     object-fit: cover;
 }
-
 
 body {
     font-family: 'Arial', sans-serif;
@@ -29,31 +28,86 @@ header {
     background-color: #4CAF50; /* Зеленый фон */
     color: white;
     padding: 15px;
-    text-align: center;
     position: sticky;
     top: 0;
     z-index: 1000;
+    display: flex;
+    justify-content: center; /* Выравнивание всех элементов по центру */
+    align-items: center;
+    flex-direction: column;
 }
 
 header h1 {
-    margin: 0;
     font-size: 36px;
+    margin: 0;
 }
 
+/* Стили для всех кнопок навигации */
 nav {
+    display: flex;
+    justify-content: center; /* Выравниваем все кнопки по центру */
+    gap: 15px; /* Расстояние между кнопками */
     margin-top: 10px;
 }
 
 nav a {
-    color: white;
-    margin: 0 15px;
+    color: white; /* Белый цвет для текста кнопок */
     text-decoration: none;
     font-size: 18px;
+    font-weight: bold;
 }
 
 nav a:hover {
-    text-decoration: underline;
+    text-decoration: underline; /* Подчеркивание при наведении */
 }
+
+/* Стили для списка продуктов */
+.product-list {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px;
+}
+
+.product-item {
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    width: 250px;
+}
+
+.product-item img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.product-item h3 {
+    font-size: 22px;
+    margin-bottom: 10px;
+}
+
+.product-item p {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+.product-item .nav-button {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #2196F3;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+.product-item .nav-button:hover {
+    background-color: #0b7dda;
+}
+
 
 /* Основной контент */
 .content {
@@ -63,22 +117,6 @@ nav a:hover {
     background-color: white;
     border-radius: 8px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-}
-
-/* Стили для кнопок навигации */
-.nav-button {
-    display: inline-block;
-    background-color: #2196F3; /* Синий цвет */
-    color: white;
-    padding: 10px 20px;
-    margin: 10px 5px;
-    border-radius: 5px;
-    text-decoration: none;
-    font-weight: bold;
-}
-
-.nav-button:hover {
-    background-color: #0b7dda;
 }
 
 /* Стили для футера */

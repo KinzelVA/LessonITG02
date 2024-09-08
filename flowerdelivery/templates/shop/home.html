@@ -40,17 +40,7 @@
   </div>
 {% endif %}
 
-<p>Зарегистрируйтесь, чтобы сделать заказ:</p>
 
-<form method="POST">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <div>
-        <input type="checkbox" name="remember_me" id="remember_me">
-        <label for="remember_me">Запомнить меня</label>
-    </div>
-    <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
-</form>
 
 <p>Выберите цветы из нашего каталога для заказа.</p>
 <a href="{% url 'flower_list' %}" class="btn btn-secondary">Перейти в каталог</a>
