@@ -6,9 +6,10 @@ from django.contrib.auth.forms import AuthenticationForm
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.contrib.auth.models import User
+from .models import CustomUser  # Импортируйте CustomUser вместо User
 from .serializers import UserRegisterSerializer
 
+# API для регистрации
 class UserRegisterAPIView(APIView):
     def post(self, request):
         serializer = UserRegisterSerializer(data=request.data)
@@ -18,6 +19,8 @@ class UserRegisterAPIView(APIView):
         else:
             print(serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Представление для формы регистрации
 def register(request):
     if request.method == 'POST':
         form = UserRegisterForm(request.POST)
@@ -39,6 +42,7 @@ def register(request):
         form = UserRegisterForm()
     return render(request, 'users/register.html', {'form': form})
 
+# Представление для входа в систему
 def login_view(request):
     if request.method == 'POST':
         form = AuthenticationForm(data=request.POST)
@@ -49,3 +53,15 @@ def login_view(request):
     else:
         form = AuthenticationForm()
     return render(request, 'users/login.html', {'form': form})
+
+# API для получения пользователя по имени (username)
+class UserByUsernameAPIView(APIView):
+    def get(self, request):
+        username = request.query_params.get('username')
+        if username:
+            try:
+                user = CustomUser.objects.get(username=username)  # Используйте CustomUser вместо User
+                return Response({'id': user.id, 'username': user.username}, status=status.HTTP_200_OK)
+            except CustomUser.DoesNotExist:
+                return Response({'error': 'Пользователь не найден'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'error': 'Имя пользователя не указано'}, status=status.HTTP_400_BAD_REQUEST)

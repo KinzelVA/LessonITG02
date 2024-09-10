@@ -4,4 +4,5 @@ from .models import Order
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
-        fields = ['id', 'user', 'items', 'status', 'created_at']  # Укажи нужные поля
+        fields = ['id', 'user', 'flowers',  'status', 'order_date']
+        # Укажи нужные поля
