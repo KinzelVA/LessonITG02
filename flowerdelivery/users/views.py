@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
-from users.serializers import UserRegisterSerializer
+from .serializers import UserRegisterSerializer
 
 class UserRegisterAPIView(APIView):
     def post(self, request):
@@ -15,7 +15,9 @@ class UserRegisterAPIView(APIView):
         if serializer.is_valid():
             serializer.save()
             return Response({'message': 'Пользователь успешно зарегистрирован!'}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            print(serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 def register(request):
     if request.method == 'POST':
         form = UserRegisterForm(request.POST)

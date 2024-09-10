@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% load static %}
+.logo-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+.logo-container img {
+    width: 150px; /* Размер логотипа */
+    height: auto;
+}
+
+
+{% block title %}Каталог цветов{% endblock %}
+
+{% block content %}
+<h2>Каталог цветов</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 20px;">
+    {% for flower in flowers %}
+    <div style="border: 1px solid #ddd; padding: 10px; width: 30%; text-align: center; background-color: #fffbf2;">
+        <h3>{{ flower.name }}</h3>
+        <p>Цена: {{ flower.price }} руб.</p>
+        <img src="{{ flower.image_url }}" alt="{{ flower.name }}" style="width: 100%; height: auto;">
+        <a href="/shop/order/{{ flower.id }}/" class="button">Купить</a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

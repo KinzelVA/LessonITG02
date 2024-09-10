@@ -2,7 +2,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from .models import Flower
-from users.forms import UserRegisterForm  # Форма регистрации
 from rest_framework import viewsets
 from .serializers import FlowerSerializer
 
@@ -25,14 +24,3 @@ def home(request):
     return render(request, 'shop/home.html')
 
 
-def register(request):
-    if request.method == 'POST':
-        form = UserRegisterForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Ваш аккаунт был создан!')
-            return redirect('home')  # Возвращаемся на главную страницу после успешной регистрации
-    else:
-        form = UserRegisterForm()
-
-    return render(request, 'shop/register.html', {'form': form})

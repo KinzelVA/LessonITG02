@@ -4,4 +4,4 @@ from .models import Flower
 class FlowerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Flower
-        fields = ['id', 'name', 'price', 'description']  # Поля модели Flower
+        fields = '__all__' # Поля модели Flower

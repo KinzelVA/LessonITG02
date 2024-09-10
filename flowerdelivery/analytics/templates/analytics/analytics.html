@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+.logo-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}
+
+.logo-container img {
+    width: 150px; /* Размер логотипа */
+    height: auto;
+}
+
+
+{% block title %}Аналитика{% endblock %}
+
+{% block content %}
+<h2>Аналитика</h2>
+<p>Данные о продажах и заказах:</p>
+
+<ul>
+    <li>Общее количество заказов: 256</li>
+    <li>Общая прибыль: 150,000 руб.</li>
+    <li>Средняя стоимость заказа: 1,500 руб.</li>
+</ul>
+
+<p>Графики и диаграммы можно добавить сюда.</p>
+{% endblock %}
