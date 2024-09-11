@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 
 class Flower(models.Model):
     name = models.CharField(max_length=100)
@@ -12,7 +12,7 @@ class Flower(models.Model):
         return f"{self.name} - {self.price} руб."
 
 class Order(models.Model):
-    user = models.ForeignKey('users.CustomUser', on_delete=models.CASCADE)
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     flower = models.ForeignKey(Flower, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, default='pending')  # Статус заказа
 

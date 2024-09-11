@@ -4,6 +4,9 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.utils.keyboard import ReplyKeyboardMarkup, KeyboardButton
 from config import BOT_TOKEN  # Убедитесь, что у вас есть токен бота
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import StatesGroup, State  # Для объявления состояний
 import aiohttp
 import asyncio
 
@@ -13,7 +16,16 @@ logger = logging.getLogger(__name__)
 
 # Инициализация бота и диспетчера
 bot = Bot(token=BOT_TOKEN)
-dp = Dispatcher()
+
+# Инициализация хранилища состояний
+storage = MemoryStorage()
+dp = Dispatcher(storage=storage)
+
+# Определение состояний для процесса регистрации
+class RegisterStates(StatesGroup):
+    awaiting_username = State()
+    awaiting_password = State()
+    awaiting_email = State()
 
 # Создание кнопок для клавиатуры
 def create_keyboard():
@@ -28,14 +40,30 @@ def create_keyboard():
     )
 
 # Функция для регистрации пользователя через API
-async def register_user_via_bot(username):
-    url = "http://127.0.0.1:8000/users/register/"
-    data = {'username': username}
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=data) as response:
-            return response.status == 201  # Успешная регистрация
+async def register_user_via_bot(username, password, email):
+    url = "http://127.0.0.1:8000/api/register/"
+    data = {'username': username, 'password': password, 'email': email}
 
-# Функция для получения каталога цветов с сайта
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=data) as response:
+                if response.status == 201:
+                    return True
+                elif response.status == 400:  # Ошибка при регистрации
+                    error_json = await response.json()
+                    logging.error(f"Ошибка при регистрации. Код ответа: {response.status}, Ответ: {error_json}")
+                    if 'username' in error_json:
+                        return f"Пользователь с именем {username} уже существует."
+                    else:
+                        return "Ошибка регистрации: " + str(error_json)
+                else:
+                    error_text = await response.text()
+                    logging.error(f"Ошибка при регистрации. Код ответа: {response.status}, Ответ: {error_text}")
+                    return False
+    except Exception as e:
+        logging.error(f"Ошибка при запросе регистрации: {str(e)}")
+        return False
+
 # Функция для получения каталога цветов с сайта
 async def get_flower_catalog():
     url = "http://127.0.0.1:8000/shop/api/flowers/"  # API для получения списка цветов
@@ -64,10 +92,10 @@ async def get_user_id_by_username(username):
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 if response.status == 200:
-                    users = await response.json()
-                    logging.info(f"Получен ответ от API: {users}")  # Логируем ответ
-                    if users:
-                        return users[0]['id']  # Проверяем, что данные пользователя есть
+                    user_data = await response.json()
+                    logging.info(f"Получен ответ от API: {user_data}")  # Логируем ответ
+                    if user_data and 'id' in user_data:
+                        return user_data['id']  # Проверяем, что данные пользователя есть
                     else:
                         logging.error(f"Пользователь с именем {username} не найден")
                         return None
@@ -104,14 +132,45 @@ async def start(message: Message):
 
 # Обработка команды "Регистрация"
 @dp.message(lambda message: message.text == "Регистрация")
-async def register(message: Message):
-    username = message.from_user.username or message.from_user.full_name
-    registration_success = await register_user_via_bot(username)
+async def handle_register_button(message: Message, state: FSMContext):
+    await message.answer("Введите ваше имя пользователя:")
+    await state.set_state(RegisterStates.awaiting_username)  # Устанавливаем состояние для регистрации
+
+# Обработка введенного имени пользователя
+@dp.message(RegisterStates.awaiting_username)
+async def process_username(message: Message, state: FSMContext):
+    username = message.text
+    await state.update_data(username=username)
+    await message.answer("Введите ваш пароль:")
+    await state.set_state(RegisterStates.awaiting_password)
+
+# Обработка введенного пароля
+@dp.message(RegisterStates.awaiting_password)
+async def process_password(message: Message, state: FSMContext):
+    password = message.text
+    await state.update_data(password=password)
+    await message.answer("Введите ваш email:")
+    await state.set_state(RegisterStates.awaiting_email)
+
+# Обработка введенного email и завершение регистрации
+@dp.message(RegisterStates.awaiting_email)
+async def process_email(message: Message, state: FSMContext):
+    email = message.text
+    user_data = await state.get_data()
+
+    username = user_data["username"]
+    password = user_data["password"]
+
+    # Вызов функции регистрации пользователя через API
+    registration_success = await register_user_via_bot(username, password, email)
 
     if registration_success:
-        await message.answer("Вы успешно зарегистрированы!")
+        await message.answer("Регистрация прошла успешно!")
     else:
         await message.answer("Произошла ошибка при регистрации.")
+
+    # Сброс состояния
+    await state.clear()
 
 # Обработка команды "Каталог цветов"
 @dp.message(lambda message: message.text == "Каталог цветов")

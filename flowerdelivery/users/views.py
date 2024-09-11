@@ -6,7 +6,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import CustomUser  # Импортируйте CustomUser вместо User
+from django.contrib.auth.models import User
 from .serializers import UserRegisterSerializer
 
 # API для регистрации
@@ -60,8 +60,8 @@ class UserByUsernameAPIView(APIView):
         username = request.query_params.get('username')
         if username:
             try:
-                user = CustomUser.objects.get(username=username)  # Используйте CustomUser вместо User
+                user = User.objects.get(username=username)  # Используйте CustomUser вместо User
                 return Response({'id': user.id, 'username': user.username}, status=status.HTTP_200_OK)
-            except CustomUser.DoesNotExist:
+            except User.DoesNotExist:
                 return Response({'error': 'Пользователь не найден'}, status=status.HTTP_404_NOT_FOUND)
         return Response({'error': 'Имя пользователя не указано'}, status=status.HTTP_400_BAD_REQUEST)
