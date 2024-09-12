@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 class Flower(models.Model):
     name = models.CharField(max_length=100)
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    image = models.ImageField(upload_to='flowers/')
+    image = models.URLField(max_length=200, blank=True, null=True)
     id = models.AutoField(primary_key=True)
     description = models.TextField(default="Описание отсутствует")
 

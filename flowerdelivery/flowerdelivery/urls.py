@@ -15,7 +15,8 @@ urlpatterns = [
     path('api/', include('flower_orders.urls')),  # API для заказов
     path('', shop_views.home, name='home'),  # Главная страница # Для загрузки изображений
 ]
-urlpatterns = urlpatterns + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 urlpatterns += [
     path('logout/', LogoutView.as_view(next_page='home'), name='logout'),
