@@ -3,6 +3,7 @@ from .models import Review
 from .serializers import ReviewSerializer
 from rest_framework.permissions import AllowAny
 from django.shortcuts import render
+from django.contrib.auth.models import User
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 import logging
@@ -24,3 +25,8 @@ class ReviewViewSet(viewsets.ModelViewSet):
 def review_list(request):
     reviews = Review.objects.all()
     return render(request, 'reviews/review_list.html', {'reviews': reviews})
+
+# Функция для получения или создания фиктивного пользователя
+def get_or_create_test_user():
+    user, created = User.objects.get_or_create(username='test_user', defaults={'password': 'test'})
+    return user

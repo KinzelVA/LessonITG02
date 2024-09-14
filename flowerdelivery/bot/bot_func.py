@@ -1,5 +1,14 @@
+import os
+import django
+
+# Устанавливаем переменную окружения для Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flowerdelivery.flowerdelivery.settings')
+
+# Инициализируем Django
+django.setup()
 import aiohttp
 import logging
+from django.contrib.auth.models import User
 
 
 # Функция для регистрации пользователя через API
@@ -61,18 +70,17 @@ async def get_user_orders(username):
         logging.error(f"Ошибка при запросе заказов: {str(e)}")
         return None
 
+async def get_or_create_test_user():
+    # Функция для создания или получения фиктивного пользователя
+    user, created = User.objects.get_or_create(username='test_user', defaults={'password': 'test'})
+    return user
 # Функция для отправки отзыва на сайт
 async def send_review_to_site(username, flower_id, review_text, rating=None):
-    # Получаем ID пользователя по имени
-    user_id = 1
 
-    if not user_id:
-        logging.error("Не удалось получить ID пользователя. Отзыв не может быть отправлен.")
-        return False
-
+    test_user = await get_or_create_test_user()
     url = "http://127.0.0.1:8000/api/reviews/"
     data = {
-        'user': user_id,  # Передаём ID пользователя
+        'user': test_user.id,  # Передаём ID пользователя
         'flower': flower_id,
         'review': review_text,
         'rating': rating if rating is not None else 5  # По умолчанию 5, если рейтинг не указан

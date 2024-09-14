@@ -11,6 +11,9 @@ class Flower(models.Model):
     def __str__(self):
         return f"{self.name} - {self.price} руб."
 
+    class Meta:
+        app_label = 'shop'  # Добавляем app_label, чтобы указать Django, к какому приложению относится модель
+
 class Order(models.Model):
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
     flower = models.ForeignKey(Flower, on_delete=models.CASCADE)
@@ -18,3 +21,6 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order #{self.id} by {self.user.username} for {self.flower.name}"
+
+    class Meta:
+        app_label = 'shop'  # Добавляем app_label для модели Order
