@@ -7,8 +7,15 @@
 <p>Здесь вы можете прочитать отзывы о нашем сервисе:</p>
 
 <ul>
-    <li>Анна: Отличный сервис, цветы были свежие и вовремя доставлены!</li>
-    <li>Игорь: Доволен качеством доставки, обязательно закажу снова!</li>
+    {% for review in reviews %}
+    <li>
+        <strong>{{ review.user.username }}</strong> оставил отзыв на <strong>{{ review.flower.name }}</strong>: <br>
+        {{ review.review }}<br>
+        Рейтинг: {{ review.rating }}
+    </li>
+    {% empty %}
+    <li>Отзывов пока нет.</li>
+    {% endfor %}
 </ul>
 
 <p><a href="#" class="nav-button">Оставить отзыв</a></p>

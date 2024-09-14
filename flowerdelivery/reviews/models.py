@@ -9,5 +9,5 @@ class Review(models.Model):
     rating = models.IntegerField()
 
     def __str__(self):
-        return f"Отзыв от {self.user.username} на {self.flower.name}"
+        return f"Отзыв от {self.user} на {self.flower.name}"
 

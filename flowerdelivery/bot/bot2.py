@@ -3,13 +3,14 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.utils.keyboard import ReplyKeyboardMarkup, KeyboardButton
-from config import BOT_TOKEN  # Убедитесь, что у вас есть токен бота
+from config import BOT_TOKEN
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.fsm.state import StatesGroup, State  # Для объявления состояний
+from aiogram.fsm.state import StatesGroup, State
 import aiohttp
+from aiogram.filters import StateFilter  # Импортируем StateFilter для фильтрации по состояниям
 import asyncio
 from aiogram.fsm.context import FSMContext
-from bot_func import register_user_via_bot, get_flower_catalog, get_user_id_by_username, place_order_via_bot, get_flower_details
+from bot_func import register_user_via_bot, get_flower_catalog, send_review_to_site, get_user_orders
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +38,7 @@ class CartStates(StatesGroup):
 def create_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="Каталог цветов"), KeyboardButton(text="Оформить заказ")],
+            [KeyboardButton(text="Каталог цветов"), KeyboardButton(text="Отзывы"), KeyboardButton(text="Оформить заказ")],
             [KeyboardButton(text="Мои заказы"), KeyboardButton(text="Оплата"), KeyboardButton(text="Регистрация")]
         ],
         resize_keyboard=True
@@ -47,7 +48,7 @@ def create_keyboard():
 @dp.message(CommandStart())
 async def start(message: Message):
     keyboard = create_keyboard()
-    await message.answer("Добро пожаловать в FlowerDelivery!", reply_markup=keyboard)
+    await message.answer("Добро пожаловать в FlowerDelivery! Вы можете делать заказы цветов через этот бот", reply_markup=keyboard)
 
 # Обработка команды "Регистрация"
 @dp.message(lambda message: message.text == "Регистрация")
@@ -76,7 +77,7 @@ async def process_password(message: Message, state: FSMContext):
 async def process_email(message: Message, state: FSMContext):
     email = message.text
     await state.update_data(email=email)
-    await message.answer("Введите ваш адрес для доставки:")
+    await message.answer("Введите ваш адрес:")
     await state.set_state(RegisterStates.awaiting_address)
 
 @dp.message(RegisterStates.awaiting_address)
@@ -122,7 +123,7 @@ async def show_flower_catalog(message: Message):
         await message.answer("Не удалось загрузить каталог цветов.")
 
 # Обработка выбора цветка
-@dp.callback_query(lambda c: c.data.startswith('flower_'))
+@dp.callback_query(lambda c: c.data.startswith('flower_'))  # Этот обработчик работает с заказами
 async def handle_flower_selection(callback_query: CallbackQuery, state: FSMContext):
     flower_id = callback_query.data.split('_')[1]
     flowers = await get_flower_catalog()
@@ -157,6 +158,7 @@ async def confirm_order(message: Message, state: FSMContext):
     if message.text.lower() == "оформить заказ":
         user_data = await state.get_data()
         cart = user_data.get('cart', [])
+        address = user_data.get('address')
         if not cart:
             await message.answer("Ваша корзина пуста.")
             return
@@ -178,38 +180,37 @@ async def process_address(message: Message, state: FSMContext):
     await message.answer("Адрес сохранен. Теперь перейдите к оплате, используя команду 'Оплата'.")
     await state.set_state(CartStates.awaiting_payment_method)
 
+# Обработка команды "Мои заказы"
 @dp.message(lambda message: message.text == "Мои заказы")
-async def my_orders(message: Message):
+async def my_orders(message: Message, state: FSMContext):
     username = message.from_user.username or message.from_user.full_name
+    logging.info(f"Получен запрос на заказы от пользователя: {username}")
+
     url = f"http://127.0.0.1:8000/api/orders/?username={username}"
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            if response.status == 200:
-                orders = await response.json()
-
-                if orders:
-                    order_list = []
-                    for order in orders:
-                        order_id = order['id']
-                        status = order['status']
-                        flower_ids = order['flowers']
-
-                        flower_names = []
-                        for flower_id in flower_ids:
-                            flower_data = await get_flower_details(flower_id)
-                            if flower_data:
-                                flower_names.append(flower_data['name'])
-
-                        # Формируем строку для каждого заказа
-                        order_list.append(f"Заказ №{order_id}: {', '.join(flower_names)} - {status}")
-
-                    await message.answer(f"Ваши заказы:\n" + "\n".join(order_list))
+    try:
+        async with aiohttp.ClientSession() as session:
+            logging.info("Создана сессия для запроса заказов")
+            async with session.get(url, ssl=False) as response:
+                if response.status == 200:
+                    orders = await response.json()
+                    logging.info(f"Заказы загружены: {orders}")
+                    if orders:
+                        order_list = []
+                        for order in orders:
+                            order_id = order['id']
+                            status = order['status']
+                            flower_names = [flower['name'] for flower in order['flowers']]
+                            order_list.append(f"Заказ №{order_id}: {', '.join(flower_names)} - {status}")
+                        await message.answer(f"Ваши заказы:\n" + "\n".join(order_list))
+                    else:
+                        await message.answer("У вас нет заказов.")
                 else:
-                    await message.answer("У вас нет заказов.")
-            else:
-                await message.answer("Не удалось загрузить ваши заказы.")
-
+                    logging.error(f"Ошибка загрузки заказов. Код ответа: {response.status}")
+                    await message.answer("Произошла ошибка при загрузке ваших заказов.")
+    except Exception as e:
+        logging.error(f"Произошла ошибка при запросе заказов: {str(e)}")
+        await message.answer("Не удалось загрузить ваши заказы.")
 
 # Обработка команды "Оплата"
 @dp.message(lambda message: message.text == "Оплата")
@@ -242,6 +243,63 @@ async def handle_payment_method(callback_query: CallbackQuery, state: FSMContext
     await callback_query.message.answer(f"Ваш заказ будет доставлен по адресу: {address} в течение часа.")
     await state.clear()
 
+# Обработка команды "Отзывы"
+@dp.message(lambda message: message.text == "Отзывы")
+async def handle_review(message: Message, state: FSMContext):
+    username = message.from_user.username or message.from_user.full_name
+
+    # Получаем список заказов пользователя
+    orders = await get_user_orders(username)
+
+    if orders:
+        # Собираем все уникальные цветы из заказов
+        flowers = []
+        flower_ids = set()  # Множество для уникальных ID цветов
+        for order in orders:
+            for flower in order['flowers']:
+                if flower['id'] not in flower_ids:
+                    flowers.append(flower)
+                    flower_ids.add(flower['id'])
+
+        # Предлагаем пользователю выбрать цветок для отзыва через кнопки
+        flower_buttons = [
+            InlineKeyboardButton(text=flower['name'], callback_data=f"review_flower_{flower['id']}") for flower in flowers
+        ]
+        flower_keyboard = InlineKeyboardMarkup(inline_keyboard=[flower_buttons])
+
+        await message.answer("Выберите цветок, на который хотите оставить отзыв:", reply_markup=flower_keyboard)
+        await state.set_state("awaiting_flower_selection_review")
+    else:
+        await message.answer("У вас нет заказов, на которые можно оставить отзыв.")
+
+# Обработка выбора цветка для отзыва
+@dp.callback_query(lambda c: c.data.startswith('review_flower_'))
+async def process_flower_selection_for_review(callback_query: CallbackQuery, state: FSMContext):
+    # Получаем ID выбранного цветка из callback_data
+    flower_id = callback_query.data.split('_')[2]  # Обновлено для корректного получения ID
+    await state.update_data(flower_id=flower_id)
+
+    # Запрашиваем у пользователя текст отзыва
+    await callback_query.message.answer("Пожалуйста, напишите ваш отзыв о цветке:")
+    await state.set_state("awaiting_review")
+
+# Обработка текста отзыва
+@dp.message(StateFilter("awaiting_review"))
+async def process_review(message: Message, state: FSMContext):
+    review_text = message.text
+    user_data = await state.get_data()
+    flower_id = user_data['flower_id']
+    username = message.from_user.username or message.from_user.full_name
+
+    # Отправляем отзыв на сайт
+    review_success = await send_review_to_site(username, flower_id, review_text, rating=None)
+
+    if review_success:
+        await message.answer("Спасибо за ваш отзыв!")
+    else:
+        await message.answer("Произошла ошибка при отправке отзыва. Попробуйте позже.")
+
+    await state.clear()
 # Основная функция
 async def main():
     await dp.start_polling(bot)
