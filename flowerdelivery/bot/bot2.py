@@ -10,7 +10,7 @@ import aiohttp
 from aiogram.filters import StateFilter  # Импортируем StateFilter для фильтрации по состояниям
 import asyncio
 from aiogram.fsm.context import FSMContext
-from bot_func import register_user_via_bot, get_flower_catalog, send_review_to_site, get_user_orders
+from bot_func import register_user_via_bot, get_flower_catalog, send_review_to_site, get_user_orders, get_or_create_test_user, get_user_id_by_username
 
 # Логирование
 logging.basicConfig(level=logging.INFO)

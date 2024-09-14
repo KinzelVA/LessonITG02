@@ -1,8 +1,15 @@
 import os
+import sys
 import django
 
+# Определяем путь к корневой директории проекта (где находится manage.py)
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Добавляем корневую директорию в sys.path
+if project_root not in sys.path:
+    sys.path.append(project_root)
 # Устанавливаем переменную окружения для Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flowerdelivery.flowerdelivery.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flowerdelivery.settings')
 
 # Инициализируем Django
 django.setup()
