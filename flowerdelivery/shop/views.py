@@ -4,6 +4,7 @@ from django.contrib import messages
 from .models import Flower
 from rest_framework import viewsets
 from .serializers import FlowerSerializer
+from .models import Order
 
 
 class FlowerViewSet(viewsets.ModelViewSet):
@@ -23,4 +24,6 @@ def home(request):
     # Здесь больше нет формы регистрации
     return render(request, 'shop/home.html')
 
-
+def order_list(request):
+    orders = Order.objects.all()  # Получаем все заказы
+    return render(request, 'shop/order_list.html', {'orders': orders})

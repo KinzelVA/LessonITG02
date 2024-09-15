@@ -8,7 +8,6 @@ router = DefaultRouter()
 router.register(r'reviews', ReviewViewSet, basename='review')
 
 urlpatterns = [
-    path('reviews/', views.review_list, name='review_list'),
     path('api/', include(router.urls)),  # Добавляем маршрут API для отзывов
 ]
 

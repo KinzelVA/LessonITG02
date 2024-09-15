@@ -1,25 +1,32 @@
+<!-- flower_orders/order_list.html -->
+
 {% extends 'base.html' %}
-
-.logo-container {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-}
-
-.logo-container img {
-    width: 150px; /* Размер логотипа */
-    height: auto;
-}
-
 
 {% block title %}Мои заказы{% endblock %}
 
 {% block content %}
 <h2>Мои заказы</h2>
-<p>Здесь отображаются все ваши текущие и предыдущие заказы:</p>
+
+<pre>{{ orders|safe }}</pre> <!-- Выводим сырые данные для отладки -->
 
 <ul>
-    <li>Заказ №1234 - 3 розы - 1500 руб. - Доставлено</li>
-    <li>Заказ №1235 - 5 тюльпанов - 1500 руб. - В обработке</li>
+    {% for order in orders %}
+    <li>
+        Заказ #{{ order.id }} - {{ order.status }} <br>
+        Дата заказа: {{ order.order_date }} <br>
+        {% if order.flowers %}
+        Цветы:
+        <ul>
+            {% for flower in order.flowers %}
+            <li>{{ flower.name }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>Цветы не указаны для этого заказа.</p>
+        {% endif %}
+    </li>
+    {% empty %}
+    <li>У вас нет заказов.</li>
+    {% endfor %}
 </ul>
 {% endblock %}

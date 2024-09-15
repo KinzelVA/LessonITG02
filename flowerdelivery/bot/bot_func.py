@@ -16,6 +16,7 @@ django.setup()
 import aiohttp
 import logging
 from django.contrib.auth.models import User
+from asgiref.sync import sync_to_async
 
 
 # Функция для регистрации пользователя через API
@@ -83,7 +84,6 @@ async def get_or_create_test_user():
     return user
 # Функция для отправки отзыва на сайт
 async def send_review_to_site(username, flower_id, review_text, rating=None):
-
     test_user = await get_or_create_test_user()
     url = "http://127.0.0.1:8000/api/reviews/"
     data = {
@@ -94,10 +94,18 @@ async def send_review_to_site(username, flower_id, review_text, rating=None):
     }
 
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(headers={'Content-Type': 'application/json'}) as session:
             async with session.post(url, json=data) as response:
                 if response.status == 201:
                     return True
+                elif response.status == 200:  # Код 200 тоже может быть успешным ответом
+                    # Проверяем, что вернулся правильный ответ
+                    response_text = await response.text()
+                    if "Прекрасный цветок" in response_text:
+                        return True
+                    else:
+                        logging.error(f"Ошибка при отправке отзыва. Ответ: {response_text}")
+                        return False
                 else:
                     error_response = await response.text()
                     logging.error(f"Ошибка при отправке отзыва. Код ответа: {response.status}. Ответ: {error_response}")
@@ -127,3 +135,9 @@ async def get_user_id_by_username(username):
     except Exception as e:
         logging.error(f"Ошибка при запросе ID пользователя: {str(e)}")
         return None
+
+# Функция для получения или создания тестового пользователя
+async def get_or_create_test_user():
+    # Используем sync_to_async для выполнения синхронной операции с базой данных в асинхронном контексте
+    user, created = await sync_to_async(User.objects.get_or_create)(username='test_user', defaults={'password': 'test'})
+    return user

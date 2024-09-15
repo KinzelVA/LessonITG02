@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Мои заказы</h2>
+<ul>
+    {% for order in orders %}
+        <li>Заказ #{{ order.id }}: {{ order.flower.name }} - {{ order.status }}</li>
+    {% empty %}
+        <li>У вас нет заказов.</li>
+    {% endfor %}
+</ul>
+{% endblock %}
