@@ -1,3 +1,4 @@
+# flowerdelivery\flower_orders\models.py
 from django.db import models
 from django.conf import settings  # Для использования кастомной модели пользователя
 from shop.models import Flower
