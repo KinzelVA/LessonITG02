@@ -5,6 +5,7 @@ from shop.models import Flower
 import logging
 
 logger = logging.getLogger(__name__)
+
 class FlowerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Flower
@@ -13,7 +14,7 @@ class FlowerSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     flowers = FlowerSerializer(many=True, read_only=True)
     flower_ids = serializers.PrimaryKeyRelatedField(queryset=Flower.objects.all(), many=True, write_only=True, source='flowers')
-    address = serializers.CharField(allow_null=True, required=False)  # Разрешаем null и делаем поле необязательным
+    address = serializers.CharField(allow_null=True, required=False)  # Адрес можно передавать пустым
 
     class Meta:
         model = Order
@@ -21,8 +22,8 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         logger.info(f"Данные для создания заказа: {validated_data}")
-        flower_ids = validated_data.pop('flowers_ids')
-        user = validated_data.pop('user')  # Обработка пользователя
+        flower_ids = validated_data.pop('flowers')  # Извлечение цветов
+        user = validated_data.pop('user')  # Извлечение пользователя
         order = Order.objects.create(user=user, **validated_data)
-        order.flowers.set(flower_ids)
+        order.flowers.set(flower_ids)  # Присваиваем цветы заказу
         return order

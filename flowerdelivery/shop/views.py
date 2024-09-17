@@ -7,7 +7,7 @@ from .serializers import FlowerSerializer
 from .models import Order
 
 
-class FlowerViewSet(viewsets.ModelViewSet):
+class FlowerViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Flower.objects.all()
     serializer_class = FlowerSerializer
 def flower_list(request):

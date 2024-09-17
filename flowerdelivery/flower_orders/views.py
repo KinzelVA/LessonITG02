@@ -27,36 +27,30 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Order.objects.none()
 
     def create(self, request, *args, **kwargs):
+        logger.info(f"Создание заказа: {request.data}")  # Логирование данных запроса
+
         data = request.data
-        logger.info(f"Полученные данные: {data}")  # Логируем все полученные данные для отладки
-
-        # Попробуем получить данные пользователя и адрес
-        user_id = data.get('user')
-        address = data.get('address', '')  # Используем пустую строку по умолчанию, если адрес не указан
-
-        if not user_id:
-            return Response({"error": "Пользователь не указан"}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Логируем информацию о пользователе и адресе
-        logger.info(f"Полученный пользователь: {user_id}, Адрес: {address}")
-
-        # Получаем список цветов
         flower_ids = data.get('flower_ids', [])
-        logger.info(f"Полученные цветы: {flower_ids}")
+        address = data.get('address', '')
+        logger.info(f"Цветы для заказа: {flower_ids}")  # Логирование цветов
 
         # Проверяем наличие цветов
         flowers = Flower.objects.filter(id__in=flower_ids)
         if not flowers.exists():
+            logger.error(f"Цветы не найдены: {flower_ids}")
             return Response({"error": "Цветы не найдены"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Создаем заказ
         try:
-            order = Order.objects.create(user_id=user_id, address=address)
-            order.flowers.set(flowers)  # Привязываем цветы к заказу
-            order.save()
+            user_id = data.get('user')
+            if not user_id:
+                logger.error("Пользователь не указан")
+                return Response({"error": "Пользователь не указан"}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Логируем успешное создание заказа
-            logger.info(f"Создан заказ: {order}")
+            order = Order.objects.create(user_id=user_id, address=address)
+            order.flowers.set(flowers)
+            order.save()
+            logger.info(f"Заказ создан: {order}")  # Логирование успешного создания
 
             serializer = self.get_serializer(order)
             return Response(serializer.data, status=status.HTTP_201_CREATED)

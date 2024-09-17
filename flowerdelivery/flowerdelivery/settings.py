@@ -94,8 +94,32 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',  # Позволяет доступ всем, если авторизация не требуется
     ],
-    # Если требуется авторизация, можешь использовать 'IsAuthenticated'
+    # Если# требуется авторизация, можешь использовать 'IsAuthenticated'
 }
+
+#LOGGING = {
+ #   'version': 1,
+  #  'disable_existing_loggers': False,
+   # 'handlers': {
+    #    'console': {
+     #       'level': 'DEBUG',
+      #      'class': 'logging.StreamHandler',
+       # },
+   # },
+    #'loggers': {
+     #   'django': {
+      #      'handlers': ['console'],
+       #     'level': 'DEBUG',
+       # },
+        #'flower_orders': {
+         #   'handlers': ['console'],
+          #  'level': 'DEBUG',
+           # 'propagate': True,
+      #  },
+  #  },
+#}
+
+
 
 CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost']
 # Срок хранения сессии по умолчанию
