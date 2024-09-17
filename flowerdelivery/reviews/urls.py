@@ -7,7 +7,5 @@ from . import views
 router = DefaultRouter()
 router.register(r'reviews', ReviewViewSet, basename='review')
 
-urlpatterns = [
-    path('api/', include(router.urls)),  # Добавляем маршрут API для отзывов
-]
+urlpatterns = router.urls
 

@@ -13,8 +13,8 @@ urlpatterns = [
     path('api/users/', include('users.urls')),  # API для пользователей
     path('shop/', include('shop.urls')),  # Каталог цветов
     path('orders/', order_views.order_list, name='order_list'),  # Страница для заказов
-    path('api/orders/', include('flower_orders.urls')),  # API для заказов
-    path('api/reviews/', include('reviews.urls')),  # API для отзывов
+    path('', include('flower_orders.urls')),  # API для заказов
+    path('api/', include('reviews.urls')),  # API для отзывов
     path('reviews/', review_views.review_list, name='review_list'),  # Страница для отзывов
     path('analytics/', include('analytics.urls')),  # Аналитика
     path('', shop_views.home, name='home'),  # Главная страница

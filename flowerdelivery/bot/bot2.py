@@ -283,6 +283,7 @@ async def process_flower_selection_for_review(callback_query: CallbackQuery, sta
     await callback_query.message.answer("Пожалуйста, напишите ваш отзыв о цветке:")
     await state.set_state("awaiting_review")
 
+
 # Обработка текста отзыва
 @dp.message(StateFilter("awaiting_review"))
 async def process_review(message: Message, state: FSMContext):

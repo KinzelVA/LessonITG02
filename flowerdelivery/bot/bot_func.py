@@ -137,7 +137,25 @@ async def get_user_id_by_username(username):
         return None
 
 # Функция для получения или создания тестового пользователя
-async def get_or_create_test_user():
-    # Используем sync_to_async для выполнения синхронной операции с базой данных в асинхронном контексте
-    user, created = await sync_to_async(User.objects.get_or_create)(username='test_user', defaults={'password': 'test'})
-    return user
+async def create_order_via_bot(user_id, cart_items, address):
+    url = "http://127.0.0.1:8000/api/orders/"
+    logging.info(f"Cart items: {cart_items}")  # Логируем содержимое корзины
+    data = {
+        'user': user_id,
+        'flowers': [item['flower']['id'] for item in cart_items],  # Передаем ID цветов
+        'address': address
+    }
+    logging.info(f"Данные для создания заказа: {data}")  # Логируем данные перед отправкой
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=data) as response:
+                if response.status == 201:
+                    logging.info("Заказ успешно создан.")
+                    return True
+                else:
+                    logging.error(f"Ошибка при создании заказа. Код ответа: {response.status}")
+                    return False
+    except Exception as e:
+        logging.error(f"Ошибка при создании заказа: {str(e)}")
+        return False
