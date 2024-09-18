@@ -16,7 +16,7 @@
 {% block title %}Отзывы о {{ flower.name }}{% endblock %}
 
 {% block content %}
-<h2>Отзывы о {{ flower.name }}</h2>
+<h2>Отзывы о {{flower.name}}</h2>
 <ul>
     {% for review in reviews %}
     <li>{{ review.user.username }}: {{ review.review }} (Рейтинг: {{ review.rating }})</li>
