@@ -1,4 +1,3 @@
-# users/views.py
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth import login
@@ -18,8 +17,9 @@ class UserRegisterAPIView(APIView):
             serializer.save()
             return Response({'message': 'Пользователь успешно зарегистрирован!'}, status=status.HTTP_201_CREATED)
         else:
+            # В случае ошибки добавим вывод в лог и отправим подробное сообщение
             print(serializer.errors)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'errors': serializer.errors, 'message': 'Ошибка при регистрации'}, status=status.HTTP_400_BAD_REQUEST)
 
 # Представление для формы регистрации
 def register(request):
@@ -61,7 +61,7 @@ class UserByUsernameAPIView(APIView):
         username = request.query_params.get('username')
         if username:
             try:
-                user = User.objects.get(username=username)  # Используйте CustomUser вместо User
+                user = User.objects.get(username=username)
                 return Response({'id': user.id, 'username': user.username}, status=status.HTTP_200_OK)
             except User.DoesNotExist:
                 return Response({'error': 'Пользователь не найден'}, status=status.HTTP_404_NOT_FOUND)

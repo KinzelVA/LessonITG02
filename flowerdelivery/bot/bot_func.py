@@ -21,9 +21,14 @@ from asgiref.sync import sync_to_async
 
 
 # Функция для регистрации пользователя через API
-async def register_user_via_bot(username, password, email, address):
+async def register_user_via_bot(username, password, password_confirm, email,):
     url = "http://127.0.0.1:8000/api/register/"
-    data = {'username': username, 'password': password, 'email': email, 'address': address}
+    data = {'username': username, 'password': password, 'password2': password_confirm, 'email': email}
+
+    headers = {
+        'Content-Type': 'application/json',  # Указываем, что данные в формате JSON
+        'Accept': 'application/json'  # Ожидаем, что API вернет JSON-ответ
+    }
 
     try:
         async with aiohttp.ClientSession() as session:

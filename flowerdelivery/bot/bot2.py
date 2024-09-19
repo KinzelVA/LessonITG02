@@ -25,6 +25,7 @@ dp = Dispatcher(storage=storage)
 class RegisterStates(StatesGroup):
     awaiting_username = State()
     awaiting_password = State()
+    awaiting_password_confirm = State()
     awaiting_email = State()
     awaiting_address = State()
 
@@ -69,25 +70,34 @@ async def process_username(message: Message, state: FSMContext):
 async def process_password(message: Message, state: FSMContext):
     password = message.text
     await state.update_data(password=password)
-    await message.answer("Введите ваш email:")
-    await state.set_state(RegisterStates.awaiting_email)
+    await message.answer("Пожалуйста, подтвердите ваш пароль:")
+    await state.set_state(RegisterStates.awaiting_password_confirm)
+
+# Обработка подтверждения пароля
+@dp.message(RegisterStates.awaiting_password_confirm)
+async def process_password_confirm(message: Message, state: FSMContext):
+    password_confirm = message.text
+    user_data = await state.get_data()
+    password = user_data["password"]
+
+    if password != password_confirm:
+        await message.answer("Пароли не совпадают. Попробуйте снова.")
+        await state.set_state(RegisterStates.awaiting_password)
+    else:
+        await state.update_data(password_confirm=password_confirm)
+        await message.answer("Введите ваш email:")
+        await state.set_state(RegisterStates.awaiting_email)
 
 # Обработка email и завершение регистрации
 @dp.message(RegisterStates.awaiting_email)
 async def process_email(message: Message, state: FSMContext):
     email = message.text
-    await state.update_data(email=email)
-    await message.answer("Введите ваш адрес:")
-    await state.set_state(RegisterStates.awaiting_address)
-
-@dp.message(RegisterStates.awaiting_address)
-async def process_address(message: Message, state: FSMContext):
-    address = message.text
     user_data = await state.get_data()
     username = user_data["username"]
     password = user_data["password"]
-    email = user_data["email"]
-    registration_success = await register_user_via_bot(username, password, email, address)
+    password_confirm = user_data["password_confirm"]
+
+    registration_success = await register_user_via_bot(username, password, password_confirm, email)
     if registration_success:
         await message.answer("Регистрация прошла успешно!")
     else:

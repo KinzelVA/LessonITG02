@@ -22,7 +22,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'rest_framework',
     'rest_framework.authtoken',
-    #'users',
+    'users',
     'shop',
     'flower_orders',
     'reviews',
@@ -46,7 +46,7 @@ ROOT_URLCONF = 'flowerdelivery.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -97,27 +97,27 @@ REST_FRAMEWORK = {
     # Если# требуется авторизация, можешь использовать 'IsAuthenticated'
 }
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-        },
-        'flower_orders': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-    },
-}
+#LOGGING = {
+ #   'version': 1,
+  #  'disable_existing_loggers': False,
+   # 'handlers': {
+    #    'console': {
+     #       'level': 'DEBUG',
+      #      'class': 'logging.StreamHandler',
+       # },
+    #},
+    #'loggers': {
+     #   'django': {
+      #      'handlers': ['console'],
+       #     'level': 'DEBUG',
+        #},
+        #'flower_orders': {
+         #   'handlers': ['console'],
+          #  'level': 'DEBUG',
+           # 'propagate': True,
+        #},
+    #},
+#}
 
 
 
