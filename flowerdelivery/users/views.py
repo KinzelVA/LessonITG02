@@ -8,9 +8,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
 from .serializers import UserRegisterSerializer
+from rest_framework.parsers import JSONParser
+from rest_framework.renderers import JSONRenderer
 
 # API для регистрации
 class UserRegisterAPIView(APIView):
+    parser_classes = [JSONParser]
+    renderer_classes = [JSONRenderer]
     def post(self, request):
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():

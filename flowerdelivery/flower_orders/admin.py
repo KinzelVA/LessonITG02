@@ -3,8 +3,8 @@ from .models import Order
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'order_date', 'status', 'address')
+    list_display = ('id', 'user', 'status',)
     search_fields = ('user__username', 'status')
     list_filter = ('status',)
-    date_hierarchy = 'order_date'
+
 

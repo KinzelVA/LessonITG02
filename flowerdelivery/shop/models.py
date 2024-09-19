@@ -15,7 +15,7 @@ class Flower(models.Model):
         app_label = 'shop'  # Добавляем app_label, чтобы указать Django, к какому приложению относится модель
 
 class Order(models.Model):
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='shop_orders')
     flower = models.ForeignKey(Flower, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, default='pending')  # Статус заказа
 

@@ -1,167 +1,122 @@
-# bot_func.py
+# flowerdelivery\bot\bot_func.py
 import os
-import sys
 import django
-
+import sys
+import logging
+from asgiref.sync import sync_to_async
+from django.contrib.auth.models import User
+from flower_orders.models import Flower, Order, OrderItem  # Импорт моделей из вашего приложения
+from reviews.models import Review
 # Определяем путь к корневой директории проекта (где находится manage.py)
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Добавляем корневую директорию в sys.path
+# Добавляем корневую директорию в sys.path, если она там отсутствует
 if project_root not in sys.path:
     sys.path.append(project_root)
+
 # Устанавливаем переменную окружения для Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flowerdelivery.settings')
 
-# Инициализируем Django
+# Инициализация Django
 django.setup()
-import aiohttp
-import logging
-from django.contrib.auth.models import User
-from asgiref.sync import sync_to_async
 
+@sync_to_async
+def get_or_create_test_user():
+    user, created = User.objects.get_or_create(username='test_user', defaults={'password': 'testpassword'})
+    return user
 
-# Функция для регистрации пользователя через API
-async def register_user_via_bot(username, password, password_confirm, email,):
-    url = "http://127.0.0.1:8000/api/register/"
-    data = {'username': username, 'password': password, 'password2': password_confirm, 'email': email}
-
-    headers = {
-        'Content-Type': 'application/json',  # Указываем, что данные в формате JSON
-        'Accept': 'application/json'  # Ожидаем, что API вернет JSON-ответ
-    }
-
+# Функция для отправки отзыва в базу данных
+@sync_to_async
+def send_review_to_site(username, flower_id, review_text, rating=None):
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=data) as response:
-                if response.status == 201:
-                    return True
-                elif response.status == 400:  # Ошибка при регистрации
-                    error_json = await response.json()
-                    logging.error(f"Ошибка при регистрации. Код ответа: {response.status}, Ответ: {error_json}")
-                    if 'username' in error_json:
-                        return f"Пользователь с именем {username} уже существует."
-                    else:
-                        return "Ошибка регистрации: " + str(error_json)
-                else:
-                    error_text = await response.text()
-                    logging.error(f"Ошибка при регистрации. Код ответа: {response.status}, Ответ: {error_text}")
-                    return False
+        user = User.objects.get(username=username)
+        flower = Flower.objects.get(id=flower_id)
+        review = Review.objects.create(user=user, flower=flower, review=review_text, rating=rating or 5)
+        review.save()
+        return True
+    except User.DoesNotExist:
+        print(f"Пользователь с именем {username} не найден")
+        return False
+    except Flower.DoesNotExist:
+        print(f"Цветок с ID {flower_id} не найден")
+        return False
     except Exception as e:
-        logging.error(f"Ошибка при запросе регистрации: {str(e)}")
+        print(f"Ошибка при сохранении отзыва: {str(e)}")
         return False
 
-
-# Функция для получения каталога цветов с сайта
-async def get_flower_catalog():
-    url = "http://127.0.0.1:8000/shop/api/flowers/"  # API для получения списка цветов
+# Функция для получения каталога цветов из базы данных
+@sync_to_async
+def get_flower_catalog():
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                logging.info(f"Ответ от API: {response.status}")
-                if response.status == 200:
-                    return await response.json()  # Возвращает список цветов
-                else:
-                    logging.error(f"Ошибка загрузки каталога. Код ответа: {response.status}")
-                    return None
+        flowers = list(Flower.objects.all())  # Преобразуем QuerySet в список
+        logging.info(f"Загружено {len(flowers)} цветов из базы данных.")
+        return flowers
     except Exception as e:
-        logging.error(f"Ошибка при запросе каталога: {str(e)}")
-        return None
-
+        logging.error(f"Ошибка при получении каталога цветов: {str(e)}")
+        return []
 
 # Функция для получения заказов пользователя
-async def get_user_orders(username):
-    url = f"http://127.0.0.1:8000/api/orders/?username={username}"
-
+@sync_to_async
+def get_user_orders(username):
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    return await response.json()  # Возвращает список заказов
-                else:
-                    logging.error(f"Ошибка загрузки заказов. Код ответа: {response.status}")
-                    return None
+        user = User.objects.get(username=username)
+        orders = Order.objects.filter(user=user)
+        return orders
+    except User.DoesNotExist:
+        print(f"Пользователь с именем {username} не найден")
+        return None
     except Exception as e:
-        logging.error(f"Ошибка при запросе заказов: {str(e)}")
+        print(f"Ошибка при получении заказов пользователя: {str(e)}")
         return None
 
-async def get_or_create_test_user():
-    # Функция для создания или получения фиктивного пользователя
-    user, created = User.objects.get_or_create(username='test_user', defaults={'password': 'test'})
-    return user
-# Функция для отправки отзыва на сайт
-async def send_review_to_site(username, flower_id, review_text, rating=None):
-    test_user = await get_or_create_test_user()
-    url = "http://127.0.0.1:8000/api/reviews/"
-    data = {
-        'user': test_user.id,  # Передаём ID пользователя
-        'flower': flower_id,
-        'review': review_text,
-        'rating': rating if rating is not None else 5  # По умолчанию 5, если рейтинг не указан
-    }
-
+# Функция для создания заказа через бота
+@sync_to_async
+def create_order_in_db(user, cart_items):
     try:
-        async with aiohttp.ClientSession(headers={'Content-Type': 'application/json'}) as session:
-            async with session.post(url, json=data) as response:
-                if response.status == 201:
-                    return True
-                elif response.status == 200:  # Код 200 тоже может быть успешным ответом
-                    # Проверяем, что вернулся правильный ответ
-                    response_text = await response.text()
-                    if "Прекрасный цветок" in response_text:
-                        return True
-                    else:
-                        logging.error(f"Ошибка при отправке отзыва. Ответ: {response_text}")
-                        return False
-                else:
-                    error_response = await response.text()
-                    logging.error(f"Ошибка при отправке отзыва. Код ответа: {response.status}. Ответ: {error_response}")
-                    return False
-    except Exception as e:
-        logging.error(f"Ошибка при запросе отзыва: {str(e)}")
-        return False
+        # Создаем новый заказ
+        order = Order.objects.create(user=user, status='Оформлен')
 
+        # Добавляем товары в заказ
+        for item in cart_items:
+            flower = Flower.objects.get(id=item['flower']['id'])
+            quantity = item['quantity']
+            price_per_item = flower.price
+            order_item = OrderItem.objects.create(
+                order=order, flower_name=flower.name, quantity=quantity, price_per_item=price_per_item
+            )
+            order_item.save()
 
-# Функция для получения ID пользователя по имени
-async def get_user_id_by_username(username):
-    url = f"http://127.0.0.1:8000/api/users/?username={username}"
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    user_data = await response.json()
-                    logging.info(f"Получен ответ от API: {user_data}")
-                    if user_data and 'id' in user_data:
-                        return user_data['id']
-                    else:
-                        logging.error(f"Пользователь с именем {username} не найден")
-                        return None
-                else:
-                    logging.error(f"Ошибка при получении ID пользователя. Код ответа: {response.status}")
-                    return None
+        order.save()
+        return order
+    except Flower.DoesNotExist:
+        print(f"Цветок с ID {item['flower']['id']} не найден")
+        return None
     except Exception as e:
-        logging.error(f"Ошибка при запросе ID пользователя: {str(e)}")
+        print(f"Ошибка при создании заказа: {str(e)}")
         return None
 
-# Функция для получения или создания тестового пользователя
-async def create_order_via_bot(user_id, cart_items, address):
-    url = "http://127.0.0.1:8000/api/orders/"
-    logging.info(f"Cart items: {cart_items}")  # Логируем содержимое корзины
-    data = {
-        'user': user_id,
-        'flowers': [item['flower']['id'] for item in cart_items],  # Передаем ID цветов
-        'address': address
-    }
-    logging.info(f"Данные для создания заказа: {data}")  # Логируем данные перед отправкой
+# Функция для создания тестового заказа (если это необходимо)
+@sync_to_async
+def create_test_order():
+    user = get_or_create_test_user()
+    return create_order_in_db(user.id, [{'flower': {'id': 1}}, {'flower': {'id': 2}}], 'Test address')
 
+# Функция для регистрации пользователя через бота
+@sync_to_async
+def register_user_via_bot(username, password, email):
+    # Проверяем, что пользователь с таким именем не существует
+    if User.objects.filter(username=username).exists():
+        return f"Пользователь с именем {username} уже существует."
+
+    # Проверяем, что пользователь с таким email не существует
+    if User.objects.filter(email=email).exists():
+        return "Пользователь с таким email уже существует."
+
+    # Создаем нового пользователя
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=data) as response:
-                if response.status == 201:
-                    logging.info("Заказ успешно создан.")
-                    return True
-                else:
-                    logging.error(f"Ошибка при создании заказа. Код ответа: {response.status}")
-                    return False
+        user = User.objects.create_user(username=username, email=email, password=password)
+        user.save()
+        return True
     except Exception as e:
-        logging.error(f"Ошибка при создании заказа: {str(e)}")
-        return False
+        print(f"Ошибка при создании пользователя: {str(e)}")
+        return "Ошибка при регистрации."
