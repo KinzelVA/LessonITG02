@@ -134,7 +134,8 @@ async def confirm_order(message: Message, state: FSMContext):
 async def show_flower_catalog(message: Message):
     try:
         # Получаем каталог цветов асинхронно
-        flowers = await get_flower_catalog()
+        logging.info("Попытка загрузить каталог цветов.")
+        flowers = await get_flower_catalog()  # Функция уже асинхронная, повторного sync_to_async не нужно
 
         logging.info(f"Загружено {len(flowers)} цветов.")
 
@@ -145,7 +146,11 @@ async def show_flower_catalog(message: Message):
                 description = flower.description or 'Описание отсутствует'
                 image_url = flower.image.url if flower.image else None
 
+                logging.info(f"Цветок: {name}, Цена: {price}, Описание: {description}, Путь к изображению: {image_url}")
+
+                # Работа с изображением
                 if image_url:
+
                     try:
                         await message.answer_photo(
                             photo=image_url,

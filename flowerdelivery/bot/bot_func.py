@@ -44,11 +44,11 @@ def send_review_to_site(username, flower_id, review_text, rating=None):
         print(f"Ошибка при сохранении отзыва: {str(e)}")
         return False
 
-# Функция для получения каталога цветов из базы данных
-@sync_to_async
+@sync_to_async# Функция для получения каталога цветов из базы данных
 def get_flower_catalog():
+    logging.info("Попытка загрузить каталог цветов из базы данных.")
     try:
-        flowers = list(Flower.objects.all())  # Преобразуем QuerySet в список
+        flowers = list(Flower.objects.all())  # Асинхронно получаем список цветов
         logging.info(f"Загружено {len(flowers)} цветов из базы данных.")
         return flowers
     except Exception as e:
