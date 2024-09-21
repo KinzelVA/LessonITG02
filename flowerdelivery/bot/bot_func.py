@@ -5,8 +5,10 @@ import sys
 import logging
 from asgiref.sync import sync_to_async
 from django.contrib.auth.models import User
-from flower_orders.models import Flower, Order, OrderItem  # Импорт моделей из вашего приложения
+from shop.models import Flower, Order  # Импорт моделей из вашего приложения
 from reviews.models import Review
+from flower_orders.models import OrderItem
+
 # Определяем путь к корневой директории проекта (где находится manage.py)
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -50,10 +52,16 @@ async def get_flower_catalog():
     try:
         flowers = await sync_to_async(list)(Flower.objects.all())  # Асинхронно получаем список цветов
         logging.info(f"Загружено {len(flowers)} цветов из базы данных.")
+
+        # Логирование цветов для проверки
+        for flower in flowers:
+            logging.info(f"Flower: {flower.name}, Image: {flower.image.url}")
+
         return flowers
     except Exception as e:
         logging.error(f"Ошибка при получении каталога цветов: {str(e)}")
         return []
+
 
 # Функция для получения заказов пользователя
 @sync_to_async
@@ -94,12 +102,6 @@ def create_order_in_db(user, cart_items):
     except Exception as e:
         print(f"Ошибка при создании заказа: {str(e)}")
         return None
-
-# Функция для создания тестового заказа (если это необходимо)
-@sync_to_async
-def create_test_order():
-    user = get_or_create_test_user()
-    return create_order_in_db(user.id, [{'flower': {'id': 1}}, {'flower': {'id': 2}}], 'Test address')
 
 # Функция для регистрации пользователя через бота
 @sync_to_async

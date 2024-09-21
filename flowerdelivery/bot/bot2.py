@@ -1,36 +1,44 @@
-# flowerdelivery\bot\bot2.py
+#bot2.py
 import os
 import sys
 import django
+import logging
+from aiogram import Bot, Dispatcher, types
+from aiogram.filters import CommandStart
+from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.state import StatesGroup, State
+from aiogram.fsm.context import FSMContext
+from aiogram.types import CallbackQuery
+from aiogram.filters import StateFilter
+from asgiref.sync import sync_to_async
+from config import BOT_TOKEN
+import asyncio
 
-# Определяем путь к корневой директории проекта
+# Определение пути к корневой директории проекта
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Добавляем корневую директорию в sys.path
+# Добавление корневой директории в sys.path
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flowerdelivery.settings')  # Убедитесь, что 'flowerdelivery.settings' это путь к вашим настройкам Django
-django.setup()  # Инициализация Django
+# Установка переменной окружения для настройки Django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flowerdelivery.settings')
 
-import logging
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
-from aiogram.utils.keyboard import ReplyKeyboardMarkup, KeyboardButton
-from config import BOT_TOKEN
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.fsm.state import StatesGroup, State
-import aiohttp
-from aiogram.filters import StateFilter  # Импортируем StateFilter для фильтрации по состояниям
-import asyncio
-from aiogram.fsm.context import FSMContext
-from bot_func import register_user_via_bot, create_order_in_db, get_or_create_test_user, get_flower_catalog, get_user_orders, send_review_to_site
-from asgiref.sync import sync_to_async  # Импортируем sync_to_async для использования асинхронных функций
-from django.contrib.auth.models import User  # Импортируем модель User
+# Инициализация Django
+django.setup()
 
-
-
+# Импорт после настройки окружения Django
+from shop.models import Flower
+from bot_func import (
+    register_user_via_bot,
+    create_order_in_db,
+    get_or_create_test_user,
+    get_flower_catalog,
+    get_user_orders,
+    send_review_to_site
+)
+from django.contrib.auth.models import User
 
 # Логирование
 logging.basicConfig(level=logging.INFO)
@@ -45,7 +53,6 @@ dp = Dispatcher(storage=storage)
 class RegisterStates(StatesGroup):
     awaiting_username = State()
     awaiting_password = State()
-    awaiting_password_confirm = State()
     awaiting_email = State()
 
 class CartStates(StatesGroup):
@@ -105,6 +112,114 @@ async def process_email(message: Message, state: FSMContext):
     else:
         await message.answer(f"Произошла ошибка: {registration_success}")
     await state.clear()
+# Обработка команды "Каталог цветов"
+@dp.message(lambda message: message.text == "Каталог цветов")
+async def show_flower_catalog(message: Message):
+    try:
+        # Получаем каталог цветов
+        flowers = await get_flower_catalog()
+
+        if not flowers:
+            await message.answer("Каталог цветов пуст или не удалось загрузить данные.")
+            return
+
+        # Проходим по каждому цветку в каталоге
+        for flower in flowers:
+            name = flower.name
+            price = flower.price
+            description = flower.description if len(flower.description) <= 100 else flower.description[:100] + '...'
+
+            # Формируем Inline клавиатуру с кнопкой "Выбрать"
+            buttons = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(text="выбор", callback_data=f"select_flower_{flower.id}")]
+                ]
+            )
+            logging.info(f"Кнопки для {flower.name}: {buttons.inline_keyboard}")
+
+            # Формируем URL изображения
+            image_url = f"http://127.0.0.1:8000{flower.image.url}"  # Локальный URL, или замените на ваш ngrok URL
+            logging.info(f"Generated image URL: {image_url}")  # Логирование URL для проверки
+
+            try:
+                await message.answer_photo(
+                    photo=image_url,
+                    caption=f"{name}\nЦена: {price} руб.\nОписание: {description}",
+                    reply_markup = buttons  # Присоединяем кнопку "Выбрать"
+                )
+            except Exception as e:
+                await message.answer(f"{name}\nЦена: {price} руб.\nОписание: {description}")
+                await message.answer(f"Ошибка при загрузке изображения: {e}")
+
+    except Exception as e:
+        await message.answer(f"Произошла ошибка при загрузке каталога цветов: {str(e)}")
+
+# Обработка нажатия на кнопку "Выбрать"
+@dp.callback_query(lambda c: c.data.startswith('select_flower_'))
+async def select_flower(callback_query: types.CallbackQuery, state: FSMContext):
+    flower_id = int(callback_query.data.split('_')[-1])
+    # Сохраняем выбранный цветок в состоянии
+    flower = await sync_to_async(Flower.objects.get)(id=flower_id)
+    await state.update_data(selected_flower={'id': flower.id, 'name': flower.name})
+
+    await bot.send_message(callback_query.from_user.id, f"Сколько штук {flower.name} вы хотите заказать?")
+    await state.set_state(CartStates.awaiting_quantity)
+
+# Обработка команды "Отзывы"
+@dp.message(lambda message: message.text == "Отзывы")
+async def handle_review(message: Message, state: FSMContext):
+    username = message.from_user.username or message.from_user.full_name
+
+    # Получаем список заказов пользователя
+    orders = await get_user_orders(username)
+
+    if orders:
+        flowers = []
+        flower_ids = set()
+        for order in orders:
+            for flower in order.flowers.all():
+                if flower.id not in flower_ids:
+                    flowers.append(flower)
+                    flower_ids.add(flower.id)
+
+        flower_buttons = [
+            InlineKeyboardButton(text=flower.name, callback_data=f"review_flower_{flower.id}") for flower in flowers
+        ]
+        flower_keyboard = InlineKeyboardMarkup(inline_keyboard=[flower_buttons])
+
+        await message.answer("Выберите цветок, на который хотите оставить отзыв:", reply_markup=flower_keyboard)
+        await state.set_state("awaiting_flower_selection_review")
+    else:
+        await message.answer("У вас нет заказов, на которые можно оставить отзыв.")
+
+    # Обработка выбора цветка для отзыва
+
+
+@dp.callback_query(lambda callback_query: callback_query.data.startswith("review_flower_"))
+async def handle_flower_selection(callback_query: CallbackQuery, state: FSMContext):
+    flower_id = int(callback_query.data.split("_")[-1])
+    await state.update_data(flower_id=flower_id)
+    await callback_query.message.answer("Напишите ваш отзыв о выбранном цветке:")
+    await state.set_state("awaiting_review_text")
+
+
+# Обработка текста отзыва
+@dp.message(StateFilter("awaiting_review_text"))
+async def handle_review_text(message: Message, state: FSMContext):
+    review_text = message.text
+    user_data = await state.get_data()
+    flower_id = user_data["flower_id"]
+    username = message.from_user.username or message.from_user.full_name
+
+    # Отправляем отзыв на сайт через функцию send_review_to_site
+    success = await send_review_to_site(username, flower_id, review_text)
+
+    if success:
+        await message.answer("Спасибо за ваш отзыв!")
+    else:
+        await message.answer("Произошла ошибка при отправке отзыва. Попробуйте позже.")
+
+    await state.clear()
 
 # Обработка команды "Оформить заказ"
 @dp.message(lambda message: message.text == "Оформить заказ")
@@ -117,7 +232,7 @@ async def confirm_order(message: Message, state: FSMContext):
         return
 
     # Получаем пользователя по его имени в Telegram
-    user = await get_or_create_test_user(message.from_user.username)
+    user = await get_or_create_test_user()
 
     # Создаем заказ в базе данных
     order = await create_order_in_db(user, cart)
@@ -129,44 +244,29 @@ async def confirm_order(message: Message, state: FSMContext):
     await message.answer("Ваш заказ был успешно оформлен!")
     await state.clear()
 
-# Обработка команды "Каталог цветов"
-@dp.message(lambda message: message.text == "Каталог цветов")
-async def show_flower_catalog(message: Message):
-    try:
-        # Получаем каталог цветов асинхронно
-        logging.info("Попытка загрузить каталог цветов.")
-        flowers = await get_flower_catalog()  # Функция уже асинхронная, повторного sync_to_async не нужно
+# Обработка команды "Оплата"
+@dp.message(lambda message: message.text == "Оплата")
+async def handle_payment(message: Message, state: FSMContext):
+    await message.answer("Введите адрес доставки:")
+    await state.set_state(CartStates.awaiting_address)
 
-        logging.info(f"Загружено {len(flowers)} цветов.")
+@dp.message(CartStates.awaiting_address)
+async def process_address(message: Message, state: FSMContext):
+    address = message.text
+    await state.update_data(address=address)
+    await message.answer("Выберите способ оплаты:")
+    await state.set_state(CartStates.awaiting_payment_method)
 
-        if flowers:
-            for flower in flowers:
-                name = flower.name
-                price = flower.price
-                description = flower.description or 'Описание отсутствует'
-                image_url = flower.image.url if flower.image else None
+@dp.message(CartStates.awaiting_payment_method)
+async def process_payment_method(message: Message, state: FSMContext):
+    payment_method = message.text
+    await state.update_data(payment_method=payment_method)
 
-                logging.info(f"Цветок: {name}, Цена: {price}, Описание: {description}, Путь к изображению: {image_url}")
+    user_data = await state.get_data()
+    address = user_data["address"]
 
-                # Работа с изображением
-                if image_url:
-
-                    try:
-                        await message.answer_photo(
-                            photo=image_url,
-                            caption=f"{name}\nЦена: {price} руб.\nОписание: {description}"
-                        )
-                    except Exception as e:
-                        logging.error(f"Ошибка при отправке фото: {e}")
-                        await message.answer(f"{name}\nЦена: {price} руб.\nОписание: {description}")
-                else:
-                    await message.answer(f"{name}\nЦена: {price} руб.\nОписание: {description}")
-        else:
-            await message.answer("Каталог цветов пуст или не удалось загрузить.")
-    except Exception as e:
-        logging.error(f"Ошибка при загрузке каталога цветов: {str(e)}")
-        await message.answer("Не удалось загрузить каталог цветов.")
-
+    await message.answer(f"Оплата прошла успешно!\nАдрес доставки: {address}\nМетод оплаты: {payment_method}")
+    await state.clear()
 
 # Обработка количества
 @dp.message(CartStates.awaiting_quantity)
@@ -187,33 +287,6 @@ async def process_quantity(message: Message, state: FSMContext):
         await state.set_state(CartStates.confirming_order)
     except ValueError:
         await message.answer("Пожалуйста, введите корректное количество.")
-
-# Обработка команды "Отзывы"
-@dp.message(lambda message: message.text == "Отзывы")
-async def handle_review(message: Message, state: FSMContext):
-    username = message.from_user.username or message.from_user.full_name
-
-    # Получаем список заказов пользователя
-    orders = await get_user_orders(username)
-
-    if orders:
-        flowers = []
-        flower_ids = set()
-        for order in orders:
-            for flower in order['flowers']:
-                if flower['id'] not in flower_ids:
-                    flowers.append(flower)
-                    flower_ids.add(flower['id'])
-
-        flower_buttons = [
-            InlineKeyboardButton(text=flower['name'], callback_data=f"review_flower_{flower['id']}") for flower in flowers
-        ]
-        flower_keyboard = InlineKeyboardMarkup(inline_keyboard=[flower_buttons])
-
-        await message.answer("Выберите цветок, на который хотите оставить отзыв:", reply_markup=flower_keyboard)
-        await state.set_state("awaiting_flower_selection_review")
-    else:
-        await message.answer("У вас нет заказов, на которые можно оставить отзыв.")
 
 # Основная функция
 async def main():

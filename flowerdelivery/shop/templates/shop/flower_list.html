@@ -7,24 +7,18 @@
 <h2>Каталог цветов</h2>
 <p>Здесь вы можете выбрать цветы для заказа:</p>
 
-<!-- Пример карточек товаров -->
+<!-- Карточки товаров -->
 <div class="product-list">
-    <!-- Карточка Роза -->
+    {% for flower in flowers %}
     <div class="product-item">
-        <h3>Роза</h3>
-        <p>Роза, это очень красивый цветок</p>
-        <img src="{% static 'images/3df854dcc2134fb48f302f377d3012a6.png' %}" alt="Роза" class="product-image">
-        <p>Цена: 500 руб.</p>
+        <h3>{{ flower.name }}</h3>
+        <p>{{ flower.description }}</p>
+        <img src="{{ flower.image.url }}" alt="{{ flower.name }}" class="product-image">
+        <p>Цена: {{ flower.price }} руб.</p>
         <a href="#" class="nav-button">Добавить в корзину</a>
     </div>
-
-    <!-- Карточка Тюльпан -->
-    <div class="product-item">
-        <h3>Тюльпан</h3>
-        <p>Тюльпан, это самый популярный весенний цветок</p>
-        <img src="{% static 'images/c6790151abb04a6ba27bc8374a2778f4.png' %}" alt="Тюльпан" class="product-image">
-        <p>Цена: 300 руб.</p>
-        <a href="#" class="nav-button">Добавить в корзину</a>
-    </div>
+    {% empty %}
+    <p>Цветы не найдены.</p>
+    {% endfor %}
 </div>
 {% endblock %}

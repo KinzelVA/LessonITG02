@@ -21,8 +21,8 @@
     <div style="border: 1px solid #ddd; padding: 10px; width: 30%; text-align: center; background-color: #fffbf2;">
         <h3>{{ flower.name }}</h3>
         <p>Цена: {{ flower.price }} руб.</p>
-        <img src="{{ flower.image_url }}" alt="{{ flower.name }}" style="width: 100%; height: auto;">
-        <a href="/shop/order/{{ flower.id }}/" class="button">Купить</a>
+        <img src="{{ flower.image.url }}" alt="{{ flower.name }}" style="width: 100%; height: auto;">
+        <a href="/shop/order/{{ flower.id }}/" class="button">Купить({{ flower.name }})</a>
     </div>
     {% endfor %}
 </div>

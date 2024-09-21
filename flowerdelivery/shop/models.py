@@ -1,3 +1,4 @@
+# shop/models.py
 from django.db import models
 from PIL import Image
 import os
@@ -12,26 +13,46 @@ class Flower(models.Model):
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)  # Сначала сохраняем изображение
 
-        # Преобразуем изображение в JPG
+        # Проверяем, есть ли изображение
         if self.image:
             img_path = self.image.path
             img = Image.open(img_path)
-            if img.format != 'JPEG':
-                # Заменяем формат изображения на JPEG
-                jpg_image_path = os.path.splitext(img_path)[0] + ".jpg"
-                img = img.convert('RGB')  # Преобразуем в RGB (JPEG не поддерживает альфа-канал)
-                img.save(jpg_image_path, 'JPEG')
 
-                # Обновляем поле изображения с новым путем
+            # Уменьшаем изображение до ширины 300px, сохраняя пропорции
+            max_size = (250, 250)
+            img.thumbnail(max_size)
+
+            # Если изображение не в формате JPEG, конвертируем его
+            if img.format != 'JPEG':
+                img = img.convert('RGB')  # Преобразуем в RGB, так как JPEG не поддерживает альфа-канал
+
+                # Формируем новый путь для сохранения JPEG
+                jpg_image_path = os.path.splitext(img_path)[0] + ".jpg"
+
+                # Сохраняем изображение в формате JPEG
+                img.save(jpg_image_path, 'JPEG', quality=85)
+
+                # Обновляем путь к изображению в модели
                 self.image.name = os.path.basename(jpg_image_path)
-                super().save(*args, **kwargs)  # Сохраняем снова с новым изображением
+
+                # Удаляем оригинальный файл изображения
+                if os.path.exists(img_path):
+                    os.remove(img_path)
+
+                # Снова сохраняем модель с обновленным путем к изображению
+                super().save(*args, **kwargs)
+
+            # Проверка и корректировка пути изображения
+            correct_path = f"flowers/{os.path.basename(self.image.name)}"
+            if self.image.name != correct_path:
+                self.image.name = correct_path
+                super().save(*args, **kwargs)  # Сохраняем модель еще раз с правильным путем
 
     def __str__(self):
         return self.name
 
     class Meta:
         app_label = 'shop'  # Добавляем app_label, чтобы указать Django, к какому приложению относится модель
-
 class Order(models.Model):
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='shop_orders')
     flower = models.ForeignKey(Flower, on_delete=models.CASCADE)
