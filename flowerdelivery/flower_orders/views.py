@@ -70,26 +70,8 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 
 def order_list(request):
-    # Функция для получения списка заказов и рендеринга шаблона
-    username = 'KinzelVA'  # Имя пользователя
-    api_url = f"http://127.0.0.1:8000/api/orders/?username={username}"
+    orders = Order.objects.filter(user=request.user)
+    return render(request, 'flower_orders/order_list.html', {'orders': orders})
 
-    response = requests.get(api_url)
 
-    if response.status_code == 200:
-        orders = response.json()
-        print("Полученные заказы через API:", orders)
-        if isinstance(orders, list):
-            # Если API возвращает список заказов
-            print("Это список заказов:", orders)
-        else:
-            # Если API возвращает объект вместо списка
-            print("API возвращает объект, а не список:", orders)
-            orders = []
-    else:
-        orders = []
-        print("Не удалось получить заказы через API")
 
-    return render(request, 'flower_orders/order_list.html', {
-        'orders': orders,  # Передаем список заказов в шаблон
-    })

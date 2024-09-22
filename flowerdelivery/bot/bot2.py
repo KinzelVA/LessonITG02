@@ -29,7 +29,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flowerdelivery.settings')
 django.setup()
 
 # Импорт после настройки окружения Django
-from shop.models import Flower
+from shop.models import Flower, Order, OrderItem
 from bot_func import (
     register_user_via_bot,
     create_order_in_db,
@@ -123,35 +123,36 @@ async def show_flower_catalog(message: Message):
             await message.answer("Каталог цветов пуст или не удалось загрузить данные.")
             return
 
-        # Проходим по каждому цветку в каталоге
+        # Выводим информацию о цветах
         for flower in flowers:
             name = flower.name
             price = flower.price
-            description = flower.description if len(flower.description) <= 100 else flower.description[:100] + '...'
-
-            # Формируем Inline клавиатуру с кнопкой "Выбрать"
-            buttons = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(text="выбор", callback_data=f"select_flower_{flower.id}")]
-                ]
-            )
-            logging.info(f"Кнопки для {flower.name}: {buttons.inline_keyboard}")
+            description = flower.description or 'Описание отсутствует'
 
             # Формируем URL изображения
-            image_url = f"http://127.0.0.1:8000{flower.image.url}"  # Локальный URL, или замените на ваш ngrok URL
+            image_url = f"http://127.0.0.1:8000{flower.image.url}"  # Локальный URL, замените на нужный
             logging.info(f"Generated image URL: {image_url}")  # Логирование URL для проверки
+        try:
+            # Отправляем фото и описание цветка
+            await message.answer_photo(
+                photo=image_url,
+                caption=f"{name}\nЦена: {price} руб.\nОписание: {description}"
+            )
+        except Exception as e:
+            logging.error(f"Ошибка при отправке фото для цветка {name}: {str(e)}")
+            await message.answer(f"{name}\nЦена: {price} руб.\nОписание: {description} (Фото временно недоступно)")
+        # Добавляем кнопки для выбора цветов с ценами
+        buttons = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(text=f"{flower.name} - {flower.price} руб.", callback_data=f"select_flower_{flower.id}")] for flower in flowers
+            ]
+        )
 
-            try:
-                await message.answer_photo(
-                    photo=image_url,
-                    caption=f"{name}\nЦена: {price} руб.\nОписание: {description}",
-                    reply_markup = buttons  # Присоединяем кнопку "Выбрать"
-                )
-            except Exception as e:
-                await message.answer(f"{name}\nЦена: {price} руб.\nОписание: {description}")
-                await message.answer(f"Ошибка при загрузке изображения: {e}")
+        # Отправляем кнопки под списком цветов
+        await message.answer("Выберите цветок для заказа:", reply_markup=buttons)
 
     except Exception as e:
+        logging.error(f"Ошибка при загрузке каталога: {str(e)}")
         await message.answer(f"Произошла ошибка при загрузке каталога цветов: {str(e)}")
 
 # Обработка нажатия на кнопку "Выбрать"
@@ -171,7 +172,7 @@ async def handle_review(message: Message, state: FSMContext):
     username = message.from_user.username or message.from_user.full_name
 
     # Получаем список заказов пользователя
-    orders = await get_user_orders(username)
+    orders = await sync_to_async (get_user_orders)(username)
 
     if orders:
         flowers = []
@@ -221,6 +222,9 @@ async def handle_review_text(message: Message, state: FSMContext):
 
     await state.clear()
 
+
+
+
 # Обработка команды "Оформить заказ"
 @dp.message(lambda message: message.text == "Оформить заказ")
 async def confirm_order(message: Message, state: FSMContext):
@@ -237,12 +241,28 @@ async def confirm_order(message: Message, state: FSMContext):
     # Создаем заказ в базе данных
     order = await create_order_in_db(user, cart)
 
-    # Отправляем уведомление суперпользователю KinzelVA
-    superuser = await sync_to_async(User.objects.get)(username="KinzelVA")
-    await bot.send_message(superuser.id, f"Новый заказ №{order.id} от {user.username}")
+    if order:
+        # Формируем текст заказа
+        order_details = ""
+        total_price = 0
+        for item in cart:
+            flower_name = item['flower']['name']
+            quantity = item['quantity']
+            flower_price = await sync_to_async(Flower.objects.get)(name=flower_name)
+            item_total = flower_price.price * quantity
+            total_price += item_total
+            order_details += f"{flower_name} - {quantity} шт. по {flower_price.price} руб. за шт. = {item_total} руб.\n"
 
-    await message.answer("Ваш заказ был успешно оформлен!")
+        order_summary = f"Ваш заказ был успешно оформлен!\nДетали заказа:\n{order_details}Общая стоимость: {total_price} руб.\nПерейдите к оплате, нажав на кнопку 'Оплата'."
+
+        await message.answer(order_summary)
+
+        # Отправляем уведомление суперпользователю KinzelVA
+        superuser = await sync_to_async(User.objects.get)(username="KinzelVA")
+        await bot.send_message(superuser.id, f"Новый заказ №{order.id} от {user.username}")
+
     await state.clear()
+
 
 # Обработка команды "Оплата"
 @dp.message(lambda message: message.text == "Оплата")
@@ -250,23 +270,69 @@ async def handle_payment(message: Message, state: FSMContext):
     await message.answer("Введите адрес доставки:")
     await state.set_state(CartStates.awaiting_address)
 
+
+# Обработка адреса доставки
 @dp.message(CartStates.awaiting_address)
 async def process_address(message: Message, state: FSMContext):
     address = message.text
     await state.update_data(address=address)
-    await message.answer("Выберите способ оплаты:")
+
+    # Формируем кнопки для выбора метода оплаты
+    payment_buttons = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Банковской картой", callback_data="payment_card")],
+            [InlineKeyboardButton(text="Наличными курьеру", callback_data="payment_cash")]
+        ]
+    )
+
+    # Отправляем сообщение с кнопками выбора оплаты
+    await message.answer("Выберите способ оплаты:", reply_markup=payment_buttons)
     await state.set_state(CartStates.awaiting_payment_method)
 
-@dp.message(CartStates.awaiting_payment_method)
-async def process_payment_method(message: Message, state: FSMContext):
-    payment_method = message.text
-    await state.update_data(payment_method=payment_method)
 
+# Обработка способа оплаты
+@dp.callback_query(lambda c: c.data.startswith("payment_"))
+async def process_payment_method(callback_query: types.CallbackQuery, state: FSMContext):
+    payment_method = callback_query.data.split("_")[-1]
+
+    # Определяем метод оплаты в зависимости от нажатой кнопки
+    if payment_method == "card":
+        payment_method_text = "Банковской картой"
+    elif payment_method == "cash":
+        payment_method_text = "Наличными курьеру"
+
+    await state.update_data(payment_method=payment_method_text)
+
+    # Получаем данные пользователя, корзины и адреса
     user_data = await state.get_data()
     address = user_data["address"]
 
-    await message.answer(f"Оплата прошла успешно!\nАдрес доставки: {address}\nМетод оплаты: {payment_method}")
+    await bot.send_message(callback_query.from_user.id,
+                           f"Оплата прошла успешно! Ваш заказ будет доставлен в течение 1 часа.\nАдрес доставки: {address}\nМетод оплаты: {payment_method_text}")
     await state.clear()
+
+# Команда "Мои заказы"
+@dp.message(lambda message: message.text == "Мои заказы")
+async def show_orders(message: Message):
+    try:
+        username = message.from_user.username or message.from_user.full_name
+        # Используем sync_to_async для асинхронного взаимодействия с базой данных
+        orders = await sync_to_async(get_user_orders)(username)
+
+        if orders:
+            for order in orders:
+                print(f"Заказ №{order.id}: Статус - {order.status}")
+                # Логирование цветов для каждого заказа
+                for item in order.items.all():
+                    print(f"Цветок: {item.flower_name}, Количество: {item.quantity}")
+
+            order_text = "\n".join([f"Заказ №{order.id} - Статус: {order.status}" for order in orders])
+            await message.answer(f"Ваши заказы:\n{order_text}")
+        else:
+            await message.answer("У вас нет заказов.")
+    except Exception as e:
+        await message.answer(f"Произошла ошибка при загрузке заказов: {str(e)}")
+
 
 # Обработка количества
 @dp.message(CartStates.awaiting_quantity)
@@ -277,13 +343,13 @@ async def process_quantity(message: Message, state: FSMContext):
             raise ValueError()
 
         user_data = await state.get_data()
-        flower = user_data['selected_flower']
+        selected_flower = user_data['selected_flower']
         cart = user_data.get('cart', [])
-        cart.append({'flower': flower, 'quantity': quantity})
+        cart.append({'flower': selected_flower, 'quantity': quantity})
         await state.update_data(cart=cart)
 
         await message.answer(
-            f"Добавлено {quantity} шт. {flower['name']} в корзину. Напишите 'Оформить заказ' для завершения или 'Каталог', чтобы добавить еще.")
+            f"Добавлено {quantity} шт. {selected_flower['name']} в корзину. Напишите 'Оформить заказ' для завершения или 'Каталог', чтобы добавить еще.")
         await state.set_state(CartStates.confirming_order)
     except ValueError:
         await message.answer("Пожалуйста, введите корректное количество.")

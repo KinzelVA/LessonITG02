@@ -22,6 +22,16 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flowerdelivery.settings')
 # Инициализация Django
 django.setup()
 
+
+@sync_to_async
+def get_flower_catalog():
+    try:
+        # Получаем все цветы из базы данных
+        flowers = Flower.objects.all()
+        return list(flowers)
+    except Exception as e:
+        print(f"Ошибка при получении каталога цветов: {str(e)}")
+        return []
 @sync_to_async
 def get_or_create_test_user():
     user, created = User.objects.get_or_create(username='test_user', defaults={'password': 'testpassword'})
@@ -47,37 +57,16 @@ def send_review_to_site(username, flower_id, review_text, rating=None):
         return False
 
 # Функция для получения каталога цветов из базы данных
-async def get_flower_catalog():
-    logging.info("Попытка загрузить каталог цветов из базы данных.")
-    try:
-        flowers = await sync_to_async(list)(Flower.objects.all())  # Асинхронно получаем список цветов
-        logging.info(f"Загружено {len(flowers)} цветов из базы данных.")
-
-        # Логирование цветов для проверки
-        for flower in flowers:
-            logging.info(f"Flower: {flower.name}, Image: {flower.image.url}")
-
-        return flowers
-    except Exception as e:
-        logging.error(f"Ошибка при получении каталога цветов: {str(e)}")
-        return []
-
-
-# Функция для получения заказов пользователя
 @sync_to_async
 def get_user_orders(username):
     try:
-        user = User.objects.get(username=username)
-        orders = Order.objects.filter(user=user)
-        return orders
-    except User.DoesNotExist:
-        print(f"Пользователь с именем {username} не найден")
-        return None
+        # Получаем все заказы пользователя по его username
+        orders = Order.objects.filter(user__username=username).prefetch_related('order_items')
+        return list(orders)
     except Exception as e:
         print(f"Ошибка при получении заказов пользователя: {str(e)}")
-        return None
-
-# Функция для создания заказа через бота
+        return []
+# Функция для получения заказов пользователя
 @sync_to_async
 def create_order_in_db(user, cart_items):
     try:
@@ -86,22 +75,34 @@ def create_order_in_db(user, cart_items):
 
         # Добавляем товары в заказ
         for item in cart_items:
-            flower = Flower.objects.get(id=item['flower']['id'])
-            quantity = item['quantity']
-            price_per_item = flower.price
-            order_item = OrderItem.objects.create(
-                order=order, flower_name=flower.name, quantity=quantity, price_per_item=price_per_item
-            )
-            order_item.save()
+            flower_id = item.get('flower', {}).get('id')
+            print(f"ID цветка: {flower_id}")  # Проверим, что id цветка корректен
+            if flower_id:
+                # Получаем объект цветка
+                flower = Flower.objects.get(id=flower_id)
+                quantity = item['quantity']
+                price_per_item = flower.price
+
+                print(f"Добавляем цветок в заказ: {flower.name}, Количество: {quantity}, Цена: {price_per_item}")
+
+                # Создаем элемент заказа с привязкой к цветку
+                order_item = OrderItem.objects.create(
+                    order=order,
+                    flower=flower,  # Привязываем объект цветка к заказу
+                    quantity=quantity,
+                    price_per_item=price_per_item
+                )
+                order_item.save()
 
         order.save()
         return order
     except Flower.DoesNotExist:
-        print(f"Цветок с ID {item['flower']['id']} не найден")
+        print(f"Цветок с ID {flower_id} не найден")
         return None
     except Exception as e:
         print(f"Ошибка при создании заказа: {str(e)}")
         return None
+
 
 # Функция для регистрации пользователя через бота
 @sync_to_async

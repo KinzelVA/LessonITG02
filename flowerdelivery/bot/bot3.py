@@ -29,3 +29,52 @@ async def my_orders(message: Message):
                     await message.answer("У вас нет заказов.")
             else:
                 await message.answer("Не удалось загрузить ваши заказы.")
+
+# Сохранение данных из ot2.py
+
+@dp.message(lambda message: message.text == "Оформить заказ")
+async def confirm_order(message: Message, state: FSMContext):
+    user_data = await state.get_data()
+    cart = user_data.get('cart', [])
+
+    if not cart:
+        await message.answer("Ваша корзина пуста.")
+        return
+
+    # Получаем пользователя по его имени в Telegram
+    user = await get_or_create_test_user()
+
+    # Создаем заказ в базе данных
+    order = await create_order_in_db(user, cart)
+
+    if order:
+
+        superuser = await sync_to_async(User.objects.get)(username="KinzelVA")
+        await bot.send_message(superuser.id, f"Новый заказ №{order.id} от {user.username}")
+
+    await message.answer("Ваш заказ был успешно оформлен!")
+    await state.clear()
+
+# Обработка команды "Оплата"
+@dp.message(lambda message: message.text == "Оплата")
+async def handle_payment(message: Message, state: FSMContext):
+    await message.answer("Введите адрес доставки:")
+    await state.set_state(CartStates.awaiting_address)
+
+@dp.message(CartStates.awaiting_address)
+async def process_address(message: Message, state: FSMContext):
+    address = message.text
+    await state.update_data(address=address)
+    await message.answer("Выберите способ оплаты:")
+    await state.set_state(CartStates.awaiting_payment_method)
+
+@dp.message(CartStates.awaiting_payment_method)
+async def process_payment_method(message: Message, state: FSMContext):
+    payment_method = message.text
+    await state.update_data(payment_method=payment_method)
+
+    user_data = await state.get_data()
+    address = user_data["address"]
+
+    await message.answer(f"Оплата прошла успешно!\nАдрес доставки: {address}\nМетод оплаты: {payment_method}")
+    await state.clear()

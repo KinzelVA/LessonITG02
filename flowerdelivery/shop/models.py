@@ -63,3 +63,12 @@ class Order(models.Model):
 
     class Meta:
         app_label = 'shop'  # Добавляем app_label для модели Order
+
+class OrderItem(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')  # Связь с заказом
+    flower_name = models.CharField(max_length=100)  # Название цветка
+    quantity = models.PositiveIntegerField()  # Количество
+    price_per_item = models.DecimalField(max_digits=10, decimal_places=2)  # Цена за штуку
+
+    def __str__(self):
+        return f"{self.flower_name} x {self.quantity} (Order #{self.order.id})"

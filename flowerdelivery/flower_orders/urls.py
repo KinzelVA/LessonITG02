@@ -8,7 +8,7 @@ router = DefaultRouter()
 router.register(r'orders', OrderViewSet, basename='order')
 
 urlpatterns = [
-    path('orders/', views.order_list, name='order_list'),  # Страница для заказов
+    path('', views.order_list, name='order_list'),  # Страница для заказов
     path('api/', include(router.urls)),  # API маршруты для заказов
 ]
 

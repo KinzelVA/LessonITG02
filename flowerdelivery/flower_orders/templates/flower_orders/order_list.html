@@ -7,14 +7,12 @@
 {% block content %}
 <h2>Мои заказы</h2>
 
-<pre>{{ orders|safe }}</pre> <!-- Выводим сырые данные для отладки -->
-
 <ul>
     {% for order in orders %}
     <li>
         Заказ #{{ order.id }} - {{ order.status }} <br>
         Дата заказа: {{ order.order_date }} <br>
-        {% if order.flowers %}
+        {% if order.order_items.all %}
         Цветы:
         <ul>
             {% for flower in order.flowers %}
