@@ -72,6 +72,7 @@ def create_order_in_db(user, cart_items):
     try:
         # Создаем новый заказ
         order = Order.objects.create(user=user, status='Оформлен')
+        print(f"Созданный заказ: {order} (тип: {type(order)})")
 
         # Добавляем товары в заказ
         for item in cart_items:

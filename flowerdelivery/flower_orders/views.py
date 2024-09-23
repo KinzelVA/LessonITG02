@@ -70,7 +70,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 
 def order_list(request):
-    orders = Order.objects.filter(user=request.user)
+    orders = Order.objects.all()
     return render(request, 'flower_orders/order_list.html', {'orders': orders})
 
 

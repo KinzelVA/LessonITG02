@@ -18,7 +18,7 @@ class Flower(models.Model):
             img_path = self.image.path
             img = Image.open(img_path)
 
-            # Уменьшаем изображение до ширины 300px, сохраняя пропорции
+            # Уменьшаем изображение до ширины 250px, сохраняя пропорции
             max_size = (250, 250)
             img.thumbnail(max_size)
 
@@ -52,23 +52,28 @@ class Flower(models.Model):
         return self.name
 
     class Meta:
-        app_label = 'shop'  # Добавляем app_label, чтобы указать Django, к какому приложению относится модель
+        app_label = 'shop'
+
+
 class Order(models.Model):
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='shop_orders')
-    flower = models.ForeignKey(Flower, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, default='pending')  # Статус заказа
 
     def __str__(self):
-        return f"Order #{self.id} by {self.user.username} for {self.flower.name}"
+        return f"Order #{self.id} by {self.user.username}"
 
     class Meta:
-        app_label = 'shop'  # Добавляем app_label для модели Order
+        app_label = 'shop'
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')  # Связь с заказом
-    flower_name = models.CharField(max_length=100)  # Название цветка
+    flower = models.ForeignKey(Flower, on_delete=models.CASCADE)  # Связь с моделью Flower
     quantity = models.PositiveIntegerField()  # Количество
     price_per_item = models.DecimalField(max_digits=10, decimal_places=2)  # Цена за штуку
 
     def __str__(self):
-        return f"{self.flower_name} x {self.quantity} (Order #{self.order.id})"
+        return f"{self.flower.name} x {self.quantity} (Order #{self.order.id})"
+
+    class Meta:
+        app_label = 'shop'

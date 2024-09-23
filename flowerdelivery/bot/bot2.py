@@ -129,18 +129,17 @@ async def show_flower_catalog(message: Message):
             price = flower.price
             description = flower.description or 'Описание отсутствует'
 
-            # Формируем URL изображения
-            image_url = f"http://127.0.0.1:8000{flower.image.url}"  # Локальный URL, замените на нужный
-            logging.info(f"Generated image URL: {image_url}")  # Логирование URL для проверки
+            # Новый код для отправки изображения из файла
+        image_path = f"media/{flower.image}"  # Относительный путь к изображению
+
+        # Пытаемся открыть файл и отправить его
         try:
-            # Отправляем фото и описание цветка
-            await message.answer_photo(
-                photo=image_url,
-                caption=f"{name}\nЦена: {price} руб.\nОписание: {description}"
-            )
-        except Exception as e:
-            logging.error(f"Ошибка при отправке фото для цветка {name}: {str(e)}")
-            await message.answer(f"{name}\nЦена: {price} руб.\nОписание: {description} (Фото временно недоступно)")
+            with open(image_path, 'rb') as image_file:
+                await message.answer_photo(photo=image_file,
+                                           caption=f"{flower.name}\nЦена: {flower.price} руб.\nОписание: {flower.description}")
+        except FileNotFoundError:
+            await message.answer(f"Изображение для {flower.name} не найдено.")
+
         # Добавляем кнопки для выбора цветов с ценами
         buttons = InlineKeyboardMarkup(
             inline_keyboard=[

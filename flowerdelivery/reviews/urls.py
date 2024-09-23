@@ -7,5 +7,7 @@ from . import views
 router = DefaultRouter()
 router.register(r'reviews', ReviewViewSet, basename='review')
 
-urlpatterns = router.urls
+urlpatterns = [
+    path('', views.review_list, name='review_list'),
+]
 

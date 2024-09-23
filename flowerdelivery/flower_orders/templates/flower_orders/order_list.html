@@ -11,12 +11,12 @@
     {% for order in orders %}
     <li>
         Заказ #{{ order.id }} - {{ order.status }} <br>
-        Дата заказа: {{ order.order_date }} <br>
-        {% if order.order_items.all %}
+        Дата заказа: {{ order.created_at }} <br>
+        {% if order_items.all %}
         Цветы:
         <ul>
-            {% for flower in order.flowers %}
-            <li>{{ flower.name }}</li>
+            {% for item in order.items.all %}
+            <li>{{ item.flower_name }}: {{ item.quantity }} шт. по {{ item.price_per_item }} руб.</li>
             {% endfor %}
         </ul>
         {% else %}
