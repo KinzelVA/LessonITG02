@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Flower, Order, OrderItem
+from .models import Order, OrderItem
 
 # Регистрация модели Flower
 

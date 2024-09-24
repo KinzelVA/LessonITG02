@@ -5,9 +5,9 @@ import sys
 import logging
 from asgiref.sync import sync_to_async
 from django.contrib.auth.models import User
-from shop.models import Flower, Order  # Импорт моделей из вашего приложения
+from shop.models import Flower  # Импорт моделей из вашего приложения
 from reviews.models import Review
-from flower_orders.models import OrderItem
+from flower_orders.models import OrderItem, Order
 
 # Определяем путь к корневой директории проекта (где находится manage.py)
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -32,10 +32,7 @@ def get_flower_catalog():
     except Exception as e:
         print(f"Ошибка при получении каталога цветов: {str(e)}")
         return []
-@sync_to_async
-def get_or_create_test_user():
-    user, created = User.objects.get_or_create(username='test_user', defaults={'password': 'testpassword'})
-    return user
+
 
 # Функция для отправки отзыва в базу данных
 @sync_to_async
@@ -57,11 +54,11 @@ def send_review_to_site(username, flower_id, review_text, rating=None):
         return False
 
 # Функция для получения каталога цветов из базы данных
-@sync_to_async
 def get_user_orders(username):
     try:
         # Получаем все заказы пользователя по его username
-        orders = Order.objects.filter(user__username=username).prefetch_related('order_items')
+        orders = Order.objects.filter(user__username=username).prefetch_related('items')
+        print(f"Найденные заказы для {username}: {orders}")
         return list(orders)
     except Exception as e:
         print(f"Ошибка при получении заказов пользователя: {str(e)}")
@@ -81,15 +78,13 @@ def create_order_in_db(user, cart_items):
             if flower_id:
                 # Получаем объект цветка
                 flower = Flower.objects.get(id=flower_id)
-
-                # Проверяем, что это действительно объект Flower
-                if not isinstance(flower, Flower):
-                    raise ValueError(f"Объект flower не является экземпляром Flower: {flower}")
-
                 quantity = item['quantity']
                 price_per_item = flower.price
 
                 print(f"Добавляем цветок в заказ: {flower.name}, Количество: {quantity}, Цена: {price_per_item}")
+                print(f"Тип переменной 'flower': {type(flower)}")  # Логирование типа flower
+
+                # Логируем поля для создания OrderItem
                 print(f"Поля для создания OrderItem: order_id={order.id}, flower={flower.name}, quantity={quantity}, price_per_item={price_per_item}")
 
                 # Создаем элемент заказа с привязкой к цветку

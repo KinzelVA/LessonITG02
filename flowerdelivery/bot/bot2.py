@@ -5,6 +5,7 @@ import django
 import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
+from aiogram import F
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.state import StatesGroup, State
@@ -29,11 +30,11 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'flowerdelivery.settings')
 django.setup()
 
 # Импорт после настройки окружения Django
-from shop.models import Flower, Order, OrderItem
+from shop.models import Flower
+from flower_orders.models import OrderItem, Order
 from bot_func import (
     register_user_via_bot,
     create_order_in_db,
-    get_or_create_test_user,
     get_flower_catalog,
     get_user_orders,
     send_review_to_site
@@ -221,9 +222,6 @@ async def handle_review_text(message: Message, state: FSMContext):
 
     await state.clear()
 
-
-
-
 # Обработка команды "Оформить заказ"
 @dp.message(lambda message: message.text == "Оформить заказ")
 async def confirm_order(message: Message, state: FSMContext):
@@ -234,33 +232,54 @@ async def confirm_order(message: Message, state: FSMContext):
         await message.answer("Ваша корзина пуста.")
         return
 
-    # Получаем пользователя по его имени в Telegram
-    user = await get_or_create_test_user()
+    username = message.from_user.username
+    telegram_user_id = message.from_user.id
+
+    # Получаем или создаем пользователя
+    user, created = await sync_to_async(User.objects.get_or_create)(
+        username=username,
+        defaults={"telegram_user_id": telegram_user_id}
+    )
+
+    if created:
+        print(f"Создан новый пользователь: {username}.")
+    else:
+        print(f"Найден существующий пользователь: {username}.")
 
     # Создаем заказ в базе данных
     order = await create_order_in_db(user, cart)
 
     if order:
-        # Формируем текст заказа
         order_details = ""
         total_price = 0
+
+        # Формируем детали заказа
         for item in cart:
-            flower_name = item['flower']['name']
-            quantity = item['quantity']
-            flower_price = await sync_to_async(Flower.objects.get)(name=flower_name)
-            item_total = flower_price.price * quantity
+            flower_data = item.get('flower')
+            flower_id = flower_data.get('id')
+            flower = await Flower.objects.get(id=flower_id)  # Здесь мы используем асинхронный запрос
+            quantity = item.get('quantity', 0)
+            print(f"Данные корзины: {cart}")
+
+            # Проверка наличия ключа 'price'
+            price_per_item = flower.price
+            if price_per_item is None:
+                await message.answer(f"Произошла ошибка: для цветка {flower.name} не указана цена.")
+                continue
+
+            item_total = quantity * price_per_item
             total_price += item_total
-            order_details += f"{flower_name} - {quantity} шт. по {flower_price.price} руб. за шт. = {item_total} руб.\n"
+            order_details += f"{flower.name} - {quantity} шт. по {price_per_item} руб. = {item_total} руб.\n"
 
-        order_summary = f"Ваш заказ был успешно оформлен!\nДетали заказа:\n{order_details}Общая стоимость: {total_price} руб.\nПерейдите к оплате, нажав на кнопку 'Оплата'."
-
+        order_summary = f"Ваш заказ успешно оформлен!\nДетали заказа:\n{order_details}Общая сумма: {total_price} руб."
         await message.answer(order_summary)
+        await state.clear()
+    else:
+        await message.answer("Произошла ошибка при оформлении заказа.")
 
-        # Отправляем уведомление суперпользователю KinzelVA
-        superuser = await sync_to_async(User.objects.get)(username="KinzelVA")
-        await bot.send_message(superuser.id, f"Новый заказ №{order.id} от {user.username}")
-
-    await state.clear()
+@dp.message(F.text == "/get_my_id")
+async def get_my_id(message: Message):
+    await message.answer(f"Твой chat_id: {message.chat.id}")
 
 
 # Обработка команды "Оплата"

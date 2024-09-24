@@ -55,25 +55,3 @@ class Flower(models.Model):
         app_label = 'shop'
 
 
-class Order(models.Model):
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='shop_orders')
-    status = models.CharField(max_length=20, default='pending')  # Статус заказа
-
-    def __str__(self):
-        return f"Order #{self.id} by {self.user.username}"
-
-    class Meta:
-        app_label = 'shop'
-
-
-class OrderItem(models.Model):
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')  # Связь с заказом
-    flower = models.ForeignKey(Flower, on_delete=models.CASCADE)  # Связь с моделью Flower
-    quantity = models.PositiveIntegerField()  # Количество
-    price_per_item = models.DecimalField(max_digits=10, decimal_places=2)  # Цена за штуку
-
-    def __str__(self):
-        return f"{self.flower.name} x {self.quantity} (Order #{self.order.id})"
-
-    class Meta:
-        app_label = 'shop'

@@ -4,7 +4,7 @@ from django.contrib import messages
 from .models import Flower
 from rest_framework import viewsets
 from .serializers import FlowerSerializer
-from .models import Order
+from flower_orders.models import Order
 
 
 class FlowerViewSet(viewsets.ReadOnlyModelViewSet):

@@ -12,7 +12,7 @@
     <li>
         Заказ #{{ order.id }} - {{ order.status }} <br>
         Дата заказа: {{ order.created_at }} <br>
-        {% if order_items.all %}
+        {% if orderitems.all %}
         Цветы:
         <ul>
             {% for item in order.items.all %}
