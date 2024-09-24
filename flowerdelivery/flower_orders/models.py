@@ -22,9 +22,8 @@ class Order(models.Model):
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')  # Связь с заказом
     flower = models.ForeignKey(Flower, on_delete=models.CASCADE)  # Связь с цветком
-    flower_name = models.CharField(max_length=100)  # Имя цветка
     quantity = models.PositiveIntegerField()  # Количество
     price_per_item = models.DecimalField(max_digits=10, decimal_places=2)  # Цена за штуку
 
     def __str__(self):
-        return f"{self.quantity}x {self.flower_name} (Order {self.order.id})"
+        return f"{self.quantity}x {self.flower.name} (Order {self.order.id})"

@@ -20,7 +20,7 @@ class OrderAdmin(admin.ModelAdmin):
 # Регистрация модели OrderItem
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ('order', 'flower_name', 'quantity', 'price_per_item')
+    list_display = ('order', 'flower', 'quantity', 'price_per_item')
     search_fields = ('order__id', 'flower_name')
 
 

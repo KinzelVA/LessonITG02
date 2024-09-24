@@ -356,6 +356,5 @@ async def process_quantity(message: Message, state: FSMContext):
 # Основная функция
 async def main():
     await dp.start_polling(bot)
-
 if __name__ == "__main__":
     asyncio.run(main())

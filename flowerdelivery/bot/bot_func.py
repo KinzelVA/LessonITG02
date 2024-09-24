@@ -81,10 +81,16 @@ def create_order_in_db(user, cart_items):
             if flower_id:
                 # Получаем объект цветка
                 flower = Flower.objects.get(id=flower_id)
+
+                # Проверяем, что это действительно объект Flower
+                if not isinstance(flower, Flower):
+                    raise ValueError(f"Объект flower не является экземпляром Flower: {flower}")
+
                 quantity = item['quantity']
                 price_per_item = flower.price
 
                 print(f"Добавляем цветок в заказ: {flower.name}, Количество: {quantity}, Цена: {price_per_item}")
+                print(f"Поля для создания OrderItem: order_id={order.id}, flower={flower.name}, quantity={quantity}, price_per_item={price_per_item}")
 
                 # Создаем элемент заказа с привязкой к цветку
                 order_item = OrderItem.objects.create(

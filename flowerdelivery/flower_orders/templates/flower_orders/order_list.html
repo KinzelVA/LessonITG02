@@ -16,7 +16,7 @@
         Цветы:
         <ul>
             {% for item in order.items.all %}
-            <li>{{ item.flower_name }}: {{ item.quantity }} шт. по {{ item.price_per_item }} руб.</li>
+            <li>{{ item.flower.name }}: {{ item.quantity }} шт. по {{ item.price_per_item }} руб.</li>
             {% endfor %}
         </ul>
         {% else %}
