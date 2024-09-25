@@ -257,9 +257,8 @@ async def confirm_order(message: Message, state: FSMContext):
         for item in cart:
             flower_data = item.get('flower')
             flower_id = flower_data.get('id')
-            flower = await Flower.objects.get(id=flower_id)  # Здесь мы используем асинхронный запрос
+            flower = await sync_to_async(Flower.objects.get)(id=flower_id)  # Теперь асинхронно
             quantity = item.get('quantity', 0)
-            print(f"Данные корзины: {cart}")
 
             # Проверка наличия ключа 'price'
             price_per_item = flower.price
@@ -271,7 +270,7 @@ async def confirm_order(message: Message, state: FSMContext):
             total_price += item_total
             order_details += f"{flower.name} - {quantity} шт. по {price_per_item} руб. = {item_total} руб.\n"
 
-        order_summary = f"Ваш заказ успешно оформлен!\nДетали заказа:\n{order_details}Общая сумма: {total_price} руб."
+        order_summary = f"Ваш заказ успешно оформлен!\nДетали заказа:\n{order_details}Общая сумма: {total_price} руб. теперь вы можете перейти к оплате, нажав кнопку оплата в нижнем меню."
         await message.answer(order_summary)
         await state.clear()
     else:
@@ -326,7 +325,7 @@ async def process_payment_method(callback_query: types.CallbackQuery, state: FSM
     address = user_data["address"]
 
     await bot.send_message(callback_query.from_user.id,
-                           f"Оплата прошла успешно! Ваш заказ будет доставлен в течение 1 часа.\nАдрес доставки: {address}\nМетод оплаты: {payment_method_text}")
+                           f"Оплата прошла успешно! Спасибо за покупку! Ваш заказ будет доставлен в течение 1 часа.\nАдрес доставки: {address}\nМетод оплаты: {payment_method_text}")
     await state.clear()
 
 # Команда "Мои заказы"
@@ -334,17 +333,26 @@ async def process_payment_method(callback_query: types.CallbackQuery, state: FSM
 async def show_orders(message: Message):
     try:
         username = message.from_user.username or message.from_user.full_name
+
+        if not username:
+            await message.answer("Не удалось определить имя пользователя. Попробуйте позже.")
+            return
+
         # Используем sync_to_async для асинхронного взаимодействия с базой данных
-        orders = await sync_to_async(get_user_orders)(username)
+        orders = await get_user_orders(username)
 
         if orders:
+            order_text = ""
             for order in orders:
-                print(f"Заказ №{order.id}: Статус - {order.status}")
-                # Логирование цветов для каждого заказа
-                for item in order.items.all():
-                    print(f"Цветок: {item.flower_name}, Количество: {item.quantity}")
+                order_text += f"Заказ №{order.id} - Статус: {order.status}\n"
 
-            order_text = "\n".join([f"Заказ №{order.id} - Статус: {order.status}" for order in orders])
+                # Асинхронный доступ к элементам заказа
+                order_items = await sync_to_async(list)(order.items.all())
+
+                # Логирование цветов для каждого заказа
+                for item in order_items:
+                    order_text += f"Цветок: {item.flower.name}, Количество: {item.quantity}\n"
+
             await message.answer(f"Ваши заказы:\n{order_text}")
         else:
             await message.answer("У вас нет заказов.")
@@ -367,7 +375,7 @@ async def process_quantity(message: Message, state: FSMContext):
         await state.update_data(cart=cart)
 
         await message.answer(
-            f"Добавлено {quantity} шт. {selected_flower['name']} в корзину. Напишите 'Оформить заказ' для завершения или 'Каталог', чтобы добавить еще.")
+            f"Добавлено {quantity} шт. {selected_flower['name']} в корзину. Нажмите кнопку в нижнем меню 'Оформить заказ' для завершения или 'Каталог', чтобы добавить еще.")
         await state.set_state(CartStates.confirming_order)
     except ValueError:
         await message.answer("Пожалуйста, введите корректное количество.")

@@ -53,7 +53,7 @@ def send_review_to_site(username, flower_id, review_text, rating=None):
         print(f"Ошибка при сохранении отзыва: {str(e)}")
         return False
 
-# Функция для получения каталога цветов из базы данных
+@sync_to_async
 def get_user_orders(username):
     try:
         # Получаем все заказы пользователя по его username
