@@ -5,6 +5,7 @@ import django
 import logging
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
+from aiogram.filters import Command
 from aiogram import F
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -77,6 +78,20 @@ def create_keyboard():
 async def start(message: Message):
     keyboard = create_keyboard()
     await message.answer("Добро пожаловать в FlowerDelivery! Вы можете делать заказы цветов через этот бот", reply_markup=keyboard)
+
+@dp.message(Command('help'))
+async def help(message: Message):
+    await message.answer("Я помогу вам оформить заказ. Зайдите в нижнее меню, нажав квадратик с четырьмя точками"
+                         "он расположен справа в строке ввода сообщений, нажмите кнопку Регистрация,"
+                         "ответьте на вопросы и бот вас зарегисстрирует. Затем в меню нажмите кнопку Каталог цветов, просмотрите"
+                         " каталог, выберите цветы укажете количество в строке сообщений и отправите боту. Количество для каждого цветка надо отправлять"
+                         "каждый раз. Затем нажимаете кнопку Оформить заказ и увидев ваш заказ в деталях: количество цветов, цена, общая сумма"
+                         "заказа, переходите к оплате, нажав кнопку Оплата, введите адрес доставки, выберите способоплаты оплатите и получите"
+                         "сообщение о том, что ваш заказ будет доставлен вам по адресу введенному вами и в какое время"
+                         "Все ваш заказ принят. Счастливых покупок! В меню так же есть кнопка Мои заказы, где вы можете посмотреть ваш заказ,"
+                         " а так же кнопка Отзывы, где вы можете оставить отзыв о качестве цветов и окачестве обслуживания.")
+
+
 
 # Обработка команды "Регистрация"
 @dp.message(lambda message: message.text == "Регистрация")

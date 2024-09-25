@@ -15,7 +15,10 @@
         <p>{{ flower.description }}</p>
         <img src="{{ flower.image.url }}" alt="{{ flower.name }}" class="product-image">
         <p>Цена: {{ flower.price }} руб.</p>
-        <a href="#" class="nav-button">Добавить в корзину</a>
+         <!-- Кнопка для перехода в Telegram-бот -->
+        <a href="https://t.me/FlowdelBot" target="_blank">
+        <button style="background-color: blue; color: white; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer;">Оформить заказ через Telegram</button>
+        </a>
     </div>
     {% empty %}
     <p>Цветы не найдены.</p>

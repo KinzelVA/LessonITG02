@@ -78,3 +78,7 @@ async def process_payment_method(message: Message, state: FSMContext):
 
     await message.answer(f"Оплата прошла успешно!\nАдрес доставки: {address}\nМетод оплаты: {payment_method}")
     await state.clear()
+
+
+
+ <a href="#" class="nav-button">Добавить в корзину</a>

@@ -22,7 +22,9 @@
         <h3>{{ flower.name }}</h3>
         <p>Цена: {{ flower.price }} руб.</p>
         <img src="{{ flower.image.url }}" alt="{{ flower.name }}" style="width: 100%; height: auto;">
-        <a href="/shop/order/{{ flower.id }}/" class="button">Купить({{ flower.name }})</a>
+        <a href="/shop/order/{{ flower.id }}/" class="button">Купить({{flower.name}})</a>
+
+
     </div>
     {% endfor %}
 </div>
