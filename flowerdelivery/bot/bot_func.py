@@ -59,6 +59,7 @@ def get_user_orders(username):
         # Получаем все заказы пользователя по его username
         orders = Order.objects.filter(user__username=username).prefetch_related('items')
         print(f"Найденные заказы для {username}: {orders}")
+
         return list(orders)
     except Exception as e:
         print(f"Ошибка при получении заказов пользователя: {str(e)}")

@@ -353,21 +353,28 @@ async def show_orders(message: Message):
             await message.answer("Не удалось определить имя пользователя. Попробуйте позже.")
             return
 
-        # Используем sync_to_async для асинхронного взаимодействия с базой данных
-        orders = await get_user_orders(username)
+        # Получаем заказы пользователя
+        orders = await get_user_orders(username)  # Убедимся, что эта часть тоже обернута в sync_to_async
 
-        if orders:
+        # Ограничиваем вывод 8 последними заказами
+        displayed_orders = orders[-8:]  # Получаем последние 8 заказов
+
+        if displayed_orders:
             order_text = ""
-            for order in orders:
+            for order in displayed_orders:
                 order_text += f"Заказ №{order.id} - Статус: {order.status}\n"
 
-                # Асинхронный доступ к элементам заказа
+                # Получаем все элементы заказа (OrderItem)
                 order_items = await sync_to_async(list)(order.items.all())
 
-                # Логирование цветов для каждого заказа
+                # Логирование и добавление элементов заказа (временно без вычислений цены)
                 for item in order_items:
                     order_text += f"Цветок: {item.flower.name}, Количество: {item.quantity}\n"
 
+                # Разделитель для разных заказов
+                order_text += "------------------------\n"
+
+            # Отправляем текст с заказами
             await message.answer(f"Ваши заказы:\n{order_text}")
         else:
             await message.answer("У вас нет заказов.")
