@@ -1,3 +1,4 @@
+# analytics/models.py
 from django.db import models
 from flower_orders.models import Order
 

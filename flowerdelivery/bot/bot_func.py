@@ -7,7 +7,7 @@ from asgiref.sync import sync_to_async
 from django.contrib.auth.models import User
 from shop.models import Flower  # Импорт моделей из вашего приложения
 from reviews.models import Review
-from flower_orders.models import OrderItem, Order
+from flower_orders.models import Order
 
 # Определяем путь к корневой директории проекта (где находится manage.py)
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -57,8 +57,7 @@ def send_review_to_site(username, flower_id, review_text, rating=None):
 def get_user_orders(username):
     try:
         # Получаем все заказы пользователя по его username
-        orders = Order.objects.filter(user__username=username).prefetch_related('items')
-        print(f"Найденные заказы для {username}: {orders}")
+        orders = Order.objects.filter(user__username=username)
 
         return list(orders)
     except Exception as e:
@@ -70,42 +69,31 @@ def create_order_in_db(user, cart_items):
     try:
         # Создаем новый заказ
         order = Order.objects.create(user=user, status='Оформлен')
-        print(f"Созданный заказ: {order} (тип: {type(order)})")
 
-        # Добавляем товары в заказ
+        order_details = ""
+        total_price = 0
+
+        # Проходим по каждому элементу корзины
         for item in cart_items:
-            flower_id = item.get('flower', {}).get('id')
-            print(f"ID цветка: {flower_id}")  # Проверим, что id цветка корректен
-            if flower_id:
-                # Получаем объект цветка
-                flower = Flower.objects.get(id=flower_id)
-                quantity = item['quantity']
-                price_per_item = flower.price
+            flower = item['flower']  # Здесь уже будет объект Flower
+            quantity = item['quantity']
+            price_per_item = flower.price
 
-                print(f"Добавляем цветок в заказ: {flower.name}, Количество: {quantity}, Цена: {price_per_item}")
-                print(f"Тип переменной 'flower': {type(flower)}")  # Логирование типа flower
+            item_total = quantity * price_per_item
+            total_price += item_total
 
-                # Логируем поля для создания OrderItem
-                print(f"Поля для создания OrderItem: order_id={order.id}, flower={flower.name}, quantity={quantity}, price_per_item={price_per_item}")
+            # Формируем строку с деталями для каждого элемента
+            order_details += f"{flower.name} - {quantity} шт. по {price_per_item} руб., всего: {item_total} руб.\n"
 
-                # Создаем элемент заказа с привязкой к цветку
-                order_item = OrderItem.objects.create(
-                    order=order,
-                    flower=flower,  # Привязываем объект цветка к заказу
-                    quantity=quantity,
-                    price_per_item=price_per_item
-                )
-                order_item.save()
-
+        # Сохраняем общую информацию о заказе и детали
+        order.total_price = total_price
+        order.order_details = order_details
         order.save()
+
         return order
-    except Flower.DoesNotExist:
-        print(f"Цветок с ID {flower_id} не найден")
-        return None
     except Exception as e:
         print(f"Ошибка при создании заказа: {str(e)}")
         return None
-
 
 # Функция для регистрации пользователя через бота
 @sync_to_async

@@ -32,7 +32,7 @@ django.setup()
 
 # Импорт после настройки окружения Django
 from shop.models import Flower
-from flower_orders.models import OrderItem, Order
+from flower_orders.models import Order
 from bot_func import (
     register_user_via_bot,
     create_order_in_db,
@@ -187,36 +187,51 @@ async def handle_review(message: Message, state: FSMContext):
     username = message.from_user.username or message.from_user.full_name
 
     # Получаем список заказов пользователя
-    orders = await sync_to_async (get_user_orders)(username)
+    orders = await get_user_orders(username)
 
     if orders:
         flowers = []
         flower_ids = set()
         for order in orders:
-            for flower in order.flowers.all():
-                if flower.id not in flower_ids:
-                    flowers.append(flower)
-                    flower_ids.add(flower.id)
+            # Проверяем, что order.order_details не пустой
+            if order.order_details:
+                flower_lines = order.order_details.split("\n")
+                for line in flower_lines:
+                    if line.strip():  # Если строка не пустая
+                        try:
+                            flower_name = line.split(" - ")[0].strip()  # Извлекаем имя цветка
+                            flower = await sync_to_async(Flower.objects.get)(name=flower_name)  # Ищем объект Flower
+                            if flower.id not in flower_ids:  # Убеждаемся, что этого цветка еще нет в списке
+                                flowers.append(flower)
+                                flower_ids.add(flower.id)
+                        except Flower.DoesNotExist:
+                            print(f"Цветок с именем {flower_name} не найден.")
+                            continue
+            #else:
+                #await message.answer(f"У заказа №{order.id} нет деталей.")
 
-        flower_buttons = [
-            InlineKeyboardButton(text=flower.name, callback_data=f"review_flower_{flower.id}") for flower in flowers
-        ]
-        flower_keyboard = InlineKeyboardMarkup(inline_keyboard=[flower_buttons])
-
-        await message.answer("Выберите цветок, на который хотите оставить отзыв:", reply_markup=flower_keyboard)
-        await state.set_state("awaiting_flower_selection_review")
+        # Если найдены цветы, создаем кнопки для выбора
+        if flowers:
+            flower_buttons = [
+                InlineKeyboardButton(text=flower.name, callback_data=f"review_flower_{flower.id}") for flower in flowers
+            ]
+            flower_keyboard = InlineKeyboardMarkup(inline_keyboard=[flower_buttons])
+            await message.answer("Выберите цветок, на который хотите оставить отзыв:", reply_markup=flower_keyboard)
+            await state.set_state("awaiting_flower_selection_review")
+        else:
+            await message.answer("Не найдено цветков для отзывов.")
     else:
         await message.answer("У вас нет заказов, на которые можно оставить отзыв.")
 
-    # Обработка выбора цветка для отзыва
-
-
+# Обработка выбора цветка для отзыва
 @dp.callback_query(lambda callback_query: callback_query.data.startswith("review_flower_"))
 async def handle_flower_selection(callback_query: CallbackQuery, state: FSMContext):
-    flower_id = int(callback_query.data.split("_")[-1])
+    flower_id = int(callback_query.data.split("_")[-1])  # Получаем ID цветка из callback_data
     await state.update_data(flower_id=flower_id)
-    await callback_query.message.answer("Напишите ваш отзыв о выбранном цветке:")
+    flower = await sync_to_async(Flower.objects.get)(id=flower_id)  # Получаем объект цветка
+    await callback_query.message.answer(f"Напишите ваш отзыв о выбранном цветке: {flower.name}")
     await state.set_state("awaiting_review_text")
+
 
 
 # Обработка текста отзыва
@@ -224,7 +239,7 @@ async def handle_flower_selection(callback_query: CallbackQuery, state: FSMConte
 async def handle_review_text(message: Message, state: FSMContext):
     review_text = message.text
     user_data = await state.get_data()
-    flower_id = user_data["flower_id"]
+    flower_id = user_data["flower_id"]  # Получаем ID цветка
     username = message.from_user.username or message.from_user.full_name
 
     # Отправляем отзыв на сайт через функцию send_review_to_site
@@ -251,7 +266,7 @@ async def confirm_order(message: Message, state: FSMContext):
     telegram_user_id = message.from_user.id
 
     # Получаем или создаем пользователя
-    user, created = await sync_to_async(User.objects.get_or_create)(
+    user, created = await sync_to_async (User.objects.get_or_create)(
         username=username,
         defaults={"telegram_user_id": telegram_user_id}
     )
@@ -262,34 +277,30 @@ async def confirm_order(message: Message, state: FSMContext):
         print(f"Найден существующий пользователь: {username}.")
 
     # Создаем заказ в базе данных
-    order = await create_order_in_db(user, cart)
+    try:
+        order = await create_order_in_db(user, cart)
 
-    if order:
-        order_details = ""
-        total_price = 0
+        if order:
+            order_details = order.order_details
+            total_price = order.total_price
+            order_summary = f"Ваш заказ успешно оформлен!\nДетали заказа:\n{order_details}Общая сумма: {total_price} руб. Теперь вы можете перейти к оплате."
+            await message.answer(order_summary)
+        else:
+            await message.answer("Произошла ошибка при оформлении заказа.")
+    except Exception as e:
+        print(f"Ошибка при оформлении заказа: {str(e)}")
+        await message.answer(f"Произошла ошибка при оформлении заказа: {str(e)}")
 
-        # Формируем детали заказа
-        for item in cart:
-            flower_data = item.get('flower')
-            flower_id = flower_data.get('id')
-            flower = await sync_to_async(Flower.objects.get)(id=flower_id)  # Теперь асинхронно
-            quantity = item.get('quantity', 0)
+    # После успешного создания заказа, отправляем уведомление суперпользователю
+    superuser_chat_id = 5141125304  # Ваш chat_id
 
-            # Проверка наличия ключа 'price'
-            price_per_item = flower.price
-            if price_per_item is None:
-                await message.answer(f"Произошла ошибка: для цветка {flower.name} не указана цена.")
-                continue
+    order_summary = f"Поступил новый заказ от {user.username}.\nОбщая сумма заказа: {order.total_price} руб.\nДетали заказа:\n{order.order_details}"
 
-            item_total = quantity * price_per_item
-            total_price += item_total
-            order_details += f"{flower.name} - {quantity} шт. по {price_per_item} руб. = {item_total} руб.\n"
+    # Отправляем сообщение суперпользователю
+    await bot.send_message(chat_id=superuser_chat_id, text=order_summary)
 
-        order_summary = f"Ваш заказ успешно оформлен!\nДетали заказа:\n{order_details}Общая сумма: {total_price} руб. теперь вы можете перейти к оплате, нажав кнопку оплата в нижнем меню."
-        await message.answer(order_summary)
-        await state.clear()
-    else:
-        await message.answer("Произошла ошибка при оформлении заказа.")
+    await state.clear()
+
 
 @dp.message(F.text == "/get_my_id")
 async def get_my_id(message: Message):
@@ -354,22 +365,24 @@ async def show_orders(message: Message):
             return
 
         # Получаем заказы пользователя
-        orders = await get_user_orders(username)  # Убедимся, что эта часть тоже обернута в sync_to_async
+        orders = await get_user_orders(username)
 
         # Ограничиваем вывод 8 последними заказами
-        displayed_orders = orders[-8:]  # Получаем последние 8 заказов
+        displayed_orders = orders[-8:]
 
         if displayed_orders:
             order_text = ""
             for order in displayed_orders:
-                order_text += f"Заказ №{order.id} - Статус: {order.status}\n"
+                # Форматируем дату без миллисекунд
+                order_date = order.created_at.strftime('%Y-%m-%d %H:%M')
 
-                # Получаем все элементы заказа (OrderItem)
-                order_items = await sync_to_async(list)(order.items.all())
-
-                # Логирование и добавление элементов заказа (временно без вычислений цены)
-                for item in order_items:
-                    order_text += f"Цветок: {item.flower.name}, Количество: {item.quantity}\n"
+                # Добавляем основные данные о заказе
+                order_text += (
+                    f"Заказ №{order.id} - Статус: {order.status}\n"
+                    f"Дата заказа: {order_date}\n"
+                    f"Общая сумма: {order.total_price} руб.\n"
+                    f"Детали заказа:\n{order.order_details}\n"
+                )
 
                 # Разделитель для разных заказов
                 order_text += "------------------------\n"
@@ -381,7 +394,6 @@ async def show_orders(message: Message):
     except Exception as e:
         await message.answer(f"Произошла ошибка при загрузке заказов: {str(e)}")
 
-
 # Обработка количества
 @dp.message(CartStates.awaiting_quantity)
 async def process_quantity(message: Message, state: FSMContext):
@@ -391,13 +403,27 @@ async def process_quantity(message: Message, state: FSMContext):
             raise ValueError()
 
         user_data = await state.get_data()
-        selected_flower = user_data['selected_flower']
+        selected_flower = user_data.get('selected_flower')
+
+        if not selected_flower:
+            await message.answer("Произошла ошибка: не удалось найти выбранный цветок.")
+            return
+
+        # Получаем объект цветка из базы данных по его ID
+        flower = await sync_to_async(Flower.objects.get)(id=selected_flower['id'])
+
+        if not flower:
+            await message.answer("Произошла ошибка: не удалось найти цветок в базе данных.")
+            return
+
         cart = user_data.get('cart', [])
-        cart.append({'flower': selected_flower, 'quantity': quantity})
+        # Добавляем объект цветка в корзину
+        cart.append({'flower': flower, 'quantity': quantity})
+
         await state.update_data(cart=cart)
 
         await message.answer(
-            f"Добавлено {quantity} шт. {selected_flower['name']} в корзину. Нажмите кнопку в нижнем меню 'Оформить заказ' для завершения или 'Каталог', чтобы добавить еще.")
+            f"Добавлено {quantity} шт. {flower.name} в корзину. Нажмите кнопку в нижнем меню 'Оформить заказ' для завершения или 'Каталог', чтобы добавить еще.")
         await state.set_state(CartStates.confirming_order)
     except ValueError:
         await message.answer("Пожалуйста, введите корректное количество.")

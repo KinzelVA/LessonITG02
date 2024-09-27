@@ -1,16 +1,5 @@
+<!-- flowerdelivery\analytics\templates\analytics\analytics.html -->
 {% extends 'base.html' %}
-
-.logo-container {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-}
-
-.logo-container img {
-    width: 150px; /* Размер логотипа */
-    height: auto;
-}
-
 
 {% block title %}Аналитика{% endblock %}
 
@@ -19,9 +8,18 @@
 <p>Данные о продажах и заказах:</p>
 
 <ul>
-    <li>Общее количество заказов: 256</li>
-    <li>Общая прибыль: 150,000 руб.</li>
-    <li>Средняя стоимость заказа: 1,500 руб.</li>
+    <li>Количество заказов за день: {{ daily_orders }}</li>
+    <li>Общая сумма продаж за день: {{ daily_sales }} руб.</li>
+</ul>
+
+<ul>
+    <li>Количество заказов за месяц: {{ monthly_orders }}</li>
+    <li>Общая сумма продаж за месяц: {{ monthly_sales }} руб.</li>
+</ul>
+
+<ul>
+    <li>Количество заказов за год: {{ yearly_orders }}</li>
+    <li>Общая сумма продаж за год: {{ yearly_sales }} руб.</li>
 </ul>
 
 <p>Графики и диаграммы можно добавить сюда.</p>
