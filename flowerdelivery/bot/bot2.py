@@ -7,6 +7,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
 from aiogram.filters import Command
 from aiogram import F
+from aiogram.types import FSInputFile
 from aiogram.types import InputFile
 from django.conf import settings
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
@@ -132,43 +133,42 @@ async def process_email(message: Message, state: FSMContext):
     await state.clear()
 # Обработка команды "Каталог цветов"
 @dp.message(lambda message: message.text == "Каталог цветов")
-async def show_flower_catalog(message: Message):
-    try:
-        flowers = await get_flower_catalog()
-
-        if not flowers:
-            await message.answer("Каталог цветов пуст или не удалось загрузить данные.")
-            return
+async def show_flower_catalog(message: types.Message):
+    flowers = await get_flower_catalog()  # Используем await для асинхронного вызова
+    if flowers:
+        keyboard_buttons = []  # Список для кнопок
 
         for flower in flowers:
-            name = flower.name
-            price = flower.price
-            description = flower.description or 'Описание отсутствует'
+            print(f"Цветок: {flower}")  # Логируем данные о цветке
 
-            # Путь к изображению на локальной машине
-            image_path = f'http://localhost:8000{flower.image.url}'
+            flower_id = flower['id']  # Получаем реальный id из данных о цветке
 
-            try:
-                # Отправляем изображение как файл
-                with open(image_path, 'rb') as image_file:
-                    await message.answer_photo(photo=InputFile(image_file),
-                                               caption=f"{name}\nЦена: {price} руб.\nОписание: {description}")
-            except Exception as e:
-                await message.answer(f"Изображение для {name} не найдено. Ошибка: {str(e)}")
+            # Отображение изображения
+            image_path = flower['image_url']  # Получаем путь к изображению
+            if image_path and os.path.exists(image_path):  # Проверяем, что файл существует
+                image_file = FSInputFile(image_path)
+                await message.answer_photo(
+                    photo=image_file,
+                    caption=f"{flower['name']}\nЦена: {flower['price']} руб.\n{flower['description']}"
+                )
+            else:
+                await message.answer(
+                    f"Изображение для {flower['name']} не найдено. Проверьте путь: {image_path}"
+                )
 
-        # Добавляем кнопки для выбора цветов
-        buttons = InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(text=f"{flower.name} - {flower.price} руб.", callback_data=f"select_flower_{flower.id}")] for flower in flowers
-            ]
-        )
+            # Создание кнопки для каждого цветка
+            button = InlineKeyboardButton(text=flower['name'], callback_data=f"select_flower_{flower_id}")
+            keyboard_buttons.append([button])  # Добавляем кнопку в список
 
-        # Отправляем кнопки под списком цветов
-        await message.answer("Выберите цветок для заказа:", reply_markup=buttons)
+        # Создаем клавиатуру и передаем список кнопок
+        keyboard = InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
 
-    except Exception as e:
-        logging.error(f"Ошибка при загрузке каталога: {str(e)}")
-        await message.answer(f"Произошла ошибка при загрузке каталога цветов: {str(e)}")
+        # Отправляем сообщение с клавиатурой
+        await message.answer("Выберите цветок для заказа:", reply_markup=keyboard)
+    else:
+        await message.answer("Каталог цветов пуст или не удалось загрузить данные.")
+
+
 # Обработка нажатия на кнопку "Выбрать"
 @dp.callback_query(lambda c: c.data.startswith('select_flower_'))
 async def select_flower(callback_query: types.CallbackQuery, state: FSMContext):

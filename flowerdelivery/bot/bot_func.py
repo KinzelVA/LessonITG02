@@ -5,6 +5,7 @@ import sys
 import logging
 from asgiref.sync import sync_to_async
 from django.contrib.auth.models import User
+from django.conf import settings
 from shop.models import Flower  # Импорт моделей из вашего приложения
 from reviews.models import Review
 from flower_orders.models import Order
@@ -25,14 +26,22 @@ django.setup()
 
 @sync_to_async
 def get_flower_catalog():
-    try:
-        # Получаем все цветы из базы данных
-        flowers = Flower.objects.all()
-        return list(flowers)
-    except Exception as e:
-        print(f"Ошибка при получении каталога цветов: {str(e)}")
-        return []
+    flowers = Flower.objects.all()
+    flower_data = []
+    for flower in flowers:
+        image_url = None
+        if flower.image:
+            # Получаем абсолютный путь к изображению
+            image_url = os.path.join(settings.MEDIA_ROOT, flower.image.name)
 
+        flower_data.append({
+            'id': flower.id,
+            'name': flower.name,
+            'price': flower.price,
+            'description': flower.description or 'Описание отсутствует',
+            'image_url': image_url
+        })
+    return flower_data
 
 # Функция для отправки отзыва в базу данных
 @sync_to_async
